@@ -28,3 +28,32 @@ export function formatUnits(v: bigint, decimals = 6, places = 2) {
   const frac = (v % base).toString().padStart(decimals, "0").slice(0, places);
   return `${whole.toString()}.${frac}`;
 }
+
+export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export async function getReceipt(hash: string): Promise<any | null> {
+  const res = await fetch(TEMPO.rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
+    cache: "no-store",
+  });
+  const j = await res.json();
+  return j.result ?? null;
+}
+
+const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const topicAddr = (t: string) => "0x" + t.slice(26).toLowerCase();
+
+export function matchesTransfer(receipt: any, token: string, from: string, to: string, amount: bigint) {
+  const logs: any[] = Array.isArray(receipt?.logs) ? receipt.logs : [];
+  return logs.some(
+    (l) =>
+      String(l.address).toLowerCase() === token.toLowerCase() &&
+      l.topics?.[0] === TRANSFER_TOPIC &&
+      l.topics.length >= 3 &&
+      topicAddr(l.topics[1]) === from.toLowerCase() &&
+      topicAddr(l.topics[2]) === to.toLowerCase() &&
+      BigInt(l.data && l.data !== "0x" ? l.data : "0x0") === amount
+  );
+}

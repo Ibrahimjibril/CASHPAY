@@ -6,7 +6,7 @@ export const TEMPO = {
 
 // TIP-20 stablecoins CashPay shows. All TIP-20 tokens use 6 decimals.
 export const TOKENS = [
-  { symbol: "pathUSD", address: "0x20c0000000000000000000000000000000000000", decimals: 6 },
+  { symbol: "OUSD", address: "0x20c0" + "0".repeat(20) + "6a37da5c996874be", decimals: 6 },
 ];
 
 export async function getTokenBalance(token: string, owner: string): Promise<bigint> {

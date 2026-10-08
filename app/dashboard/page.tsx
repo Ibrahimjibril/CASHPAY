@@ -105,6 +105,7 @@ export default function Dashboard() {
       <Balance getToken={getAccessToken} />
       <div className="cta">
         <a className="btn primary" href="/send">Send</a>
+        <a className="btn" href="/activity">Activity</a>
         <span className="btn" aria-disabled>Request · soon</span>
         <span className="btn" aria-disabled>Tip · soon</span>
       </div>

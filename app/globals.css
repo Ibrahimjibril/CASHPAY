@@ -59,3 +59,11 @@ button.btn{font:inherit;cursor:pointer}
 .btn.primary{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
 .btn:hover{filter:brightness(1.1)}
 .btn[disabled]{opacity:.55}
+.list{display:grid;gap:10px;width:100%;margin:12px 0}
+.act{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.plus{color:var(--brand);font-weight:800}
+.minus{color:var(--ink);font-weight:800}
+.receipt{width:100%;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;text-align:center}
+.kv{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);text-align:left;font-size:14px}
+.kv span{color:var(--muted)}
+.kv b{text-align:right;word-break:break-word}

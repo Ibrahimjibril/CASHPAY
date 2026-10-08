@@ -4,7 +4,7 @@ import { sql } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
 import { TEMPO, getReceipt, matchesTransfer, sleep } from "@/lib/tempo";
 import { OUSD_ADDRESS, parseUnits6 } from "@/lib/money";
-import { sendClaimEmail } from "@/lib/email";
+import { notifyRecipient } from "@/lib/notify";
 
 const Body = z.object({
   txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
@@ -37,27 +37,22 @@ export async function POST(req: Request) {
   const to = parsed.data.to.toLowerCase();
   const amount = parsed.data.amount.trim();
   const memo = parsed.data.memo || null;
+  const recipientEmail = parsed.data.recipientEmail ?? null;
   const units = parseUnits6(amount);
   if (!units || units <= BigInt(0)) return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
 
-  const me = await sql`select username, wallet_address from users where id = ${userId}`;
+  const me = await sql`select wallet_address from users where id = ${userId}`;
   const from = me[0]?.wallet_address as string | undefined;
   if (!from) return NextResponse.json({ error: "Your wallet isn't ready yet." }, { status: 400 });
 
   const explorerUrl = `${TEMPO.explorer}/tx/${hash}`;
   let id: string;
-  let recipientEmail: string | null = parsed.data.recipientEmail ?? null;
-  let emailedAlready = false;
 
-  const existing = await sql`select id, sender_id, status, recipient_email, emailed from payments where tx_hash = ${hash}`;
+  const existing = await sql`select id, sender_id, status from payments where tx_hash = ${hash}`;
   if (existing[0]) {
     if (existing[0].sender_id !== userId) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
     id = existing[0].id;
-    recipientEmail = existing[0].recipient_email;
-    emailedAlready = existing[0].emailed;
-    if (existing[0].status !== "SUBMITTED") {
-      return NextResponse.json({ status: existing[0].status, id, explorerUrl, emailed: emailedAlready });
-    }
+    if (existing[0].status !== "SUBMITTED") return NextResponse.json({ status: existing[0].status, id, explorerUrl, emailed: false });
   } else {
     const rec = await sql`select id from users where lower(wallet_address) = ${to}`;
     const recipientId = rec[0]?.id ?? null;
@@ -74,11 +69,10 @@ export async function POST(req: Request) {
     await sql`update payments set status = ${status}, confirmed_at = case when ${status} = 'CONFIRMED' then now() else null end where tx_hash = ${hash}`;
   }
 
-  let emailed = emailedAlready;
-  if (status === "CONFIRMED" && recipientEmail && !emailedAlready) {
-    const link = `${new URL(req.url).origin}/claim/${id}`;
-    emailed = await sendClaimEmail(recipientEmail, { amount, from: `@${me[0].username}`, memo, link }).catch(() => false);
-    if (emailed) await sql`update payments set emailed = true where id = ${id}`;
+  let emailed = false;
+  if (status === "CONFIRMED") {
+    const n = await notifyRecipient(new URL(req.url).origin, id).catch(() => ({ ok: false }));
+    emailed = n.ok;
   }
   return NextResponse.json({ status, id, explorerUrl, emailed });
 }

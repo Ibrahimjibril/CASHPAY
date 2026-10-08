@@ -8,7 +8,6 @@ const DAY = 86400000;
 const num = (v: any) => Number(v ?? 0) || 0;
 const ts = (v: any) => new Date(v).getTime();
 const short = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
-const fm = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const pct = (cur: number, prev: number) => (prev > 0 ? Math.round(((cur - prev) / prev) * 100) : cur > 0 ? 100 : 0);
 
 type Ev = { id: string; kind: "sent" | "received" | "claimed"; tip: boolean; amount: number; ts: number; status: string; who: string };
@@ -20,26 +19,27 @@ export async function GET(req: Request) {
   const me = await sql`select username, display_name, wallet_address, created_at from users where id = ${userId}`;
   if (!me[0]) return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   const wallet = ((me[0].wallet_address as string) || "").toLowerCase();
-
-  let balance = 0;
-  if (wallet) {
-    try { balance = num(formatUnits(await getTokenBalance(OUSD_ADDRESS, wallet), 6, 6)); } catch {}
-  }
-
-  const totalUsers = num((await sql`select count(*)::int as n from users`)[0].n);
-  const userTs: number[] = (await sql`select created_at from users where created_at > now() - interval '9 days'`).map((u: any) => ts(u.created_at));
-
   const w = wallet || "none";
-  const rows: any[] = await sql`
-    select p.id, p.amount, p.memo, p.status, p.created_at, p.sender_id, p.recipient_address, p.recipient_email, p.recipient_x,
-           p.claim_status, p.claim_amount, p.claimed_at, p.claimed_by,
-           su.username as sender_username, ru.username as recipient_username
-    from payments p
-    join users su on su.id = p.sender_id
-    left join users ru on lower(ru.wallet_address) = p.recipient_address
-    where p.sender_id = ${userId} or p.recipient_address = ${w} or p.claimed_by = ${userId}
-    order by p.created_at desc
-    limit 500`;
+
+  const [bal, usersRows, userTsRows, rows]: any[] = await Promise.all([
+    wallet ? getTokenBalance(OUSD_ADDRESS, wallet).catch(() => BigInt(0)) : Promise.resolve(BigInt(0)),
+    sql`select count(*)::int as n from users`,
+    sql`select created_at from users where created_at > now() - interval '9 days'`,
+    sql`
+      select p.id, p.amount, p.memo, p.status, p.created_at, p.sender_id, p.recipient_address, p.recipient_email, p.recipient_x,
+             p.claim_status, p.claim_amount, p.claimed_at, p.claimed_by,
+             su.username as sender_username, ru.username as recipient_username
+      from payments p
+      join users su on su.id = p.sender_id
+      left join users ru on lower(ru.wallet_address) = p.recipient_address
+      where p.sender_id = ${userId} or p.recipient_address = ${w} or p.claimed_by = ${userId}
+      order by p.created_at desc
+      limit 300`,
+  ]);
+
+  const balance = num(formatUnits(bal as bigint, 6, 6));
+  const totalUsers = num(usersRows[0].n);
+  const userTs: number[] = userTsRows.map((u: any) => ts(u.created_at));
 
   const evs: Ev[] = [];
   for (const r of rows) {
@@ -94,31 +94,19 @@ export async function GET(req: Request) {
     tx: days8.map((d) => conf.filter((e) => e.ts >= d.start && e.ts < d.end).length),
   };
 
-  const title = (e: Ev) => (e.kind === "claimed" ? "Tip claimed" : e.kind === "received" ? (e.tip ? "Tip received" : "Payment received") : e.tip ? "Tip sent" : "Payment sent");
+  const code = (e: Ev) => (e.kind === "claimed" ? "claimed" : e.kind === "received" ? (e.tip ? "tipRecv" : "payRecv") : e.tip ? "tipSent" : "paySent");
   const tone = (e: Ev) => (e.kind === "claimed" || (e.kind === "received" && e.tip) ? "green" : e.kind === "received" ? "lav" : e.tip ? "blue" : "red");
   const icon = (e: Ev) => (e.tip || e.kind === "claimed" ? "send" : e.kind === "received" ? "download" : "upload");
 
   const events: any[] = evs.slice(0, 5).map((e) => ({
-    id: `${e.id}-${e.kind}`,
-    title: title(e),
-    amt: e.kind === "sent" ? null : `+$${fm(e.amount)}`,
-    text: e.kind === "sent" ? `$${fm(e.amount)} to ${e.who}` : e.kind === "claimed" ? "claimed via X" : `from ${e.who}`,
-    ts: e.ts,
-    tone: tone(e),
-    icon: icon(e),
+    id: `${e.id}-${e.kind}`, code: code(e), amount: e.amount, who: e.who, ts: e.ts, tone: tone(e), icon: icon(e),
   }));
-  events.push({ id: "wallet", title: "Wallet created", amt: null, text: `@${me[0].username}`, ts: ts(me[0].created_at), tone: "blue", icon: "wallet" });
+  events.push({ id: "wallet", code: "wallet", amount: 0, who: `@${me[0].username}`, ts: ts(me[0].created_at), tone: "blue", icon: "wallet" });
   events.sort((a, b) => b.ts - a.ts);
 
   const txs = evs.slice(0, 5).map((e) => ({
-    id: `${e.id}-${e.kind}`,
-    type: title(e),
-    who: e.who,
-    amount: e.kind === "sent" ? -e.amount : e.amount,
-    status: e.status === "CONFIRMED" ? "Completed" : e.status === "SUBMITTED" ? "Pending" : e.status === "FAILED" ? "Failed" : "Review",
-    ts: e.ts,
-    tone: tone(e),
-    icon: icon(e),
+    id: `${e.id}-${e.kind}`, code: code(e), who: e.who, amount: e.kind === "sent" ? -e.amount : e.amount,
+    status: e.status, ts: e.ts, tone: tone(e), icon: icon(e),
   }));
 
   const badge = evs.filter((e) => incoming(e) && e.ts > now - DAY).length;
@@ -126,10 +114,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     profile: { username: me[0].username, displayName: me[0].display_name, wallet },
     explorerUrl: wallet ? `${TEMPO.explorer}/address/${wallet}` : TEMPO.explorer,
-    badge,
-    stats,
-    spark,
-    series,
+    badge, stats, spark, series,
     events: events.slice(0, 5),
     txs,
   });

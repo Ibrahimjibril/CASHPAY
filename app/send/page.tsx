@@ -1,4 +1,5 @@
 "use client";
+import Loader from "@/app/components/Loader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -32,7 +33,7 @@ export default function Send() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
-  const [requestId, setRequestId] = useState<string | null>(null);
+  
   const [prefilled, setPrefilled] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
@@ -70,7 +71,7 @@ export default function Send() {
     const x = (sp.get("x") || "").replace(/^@/, "").toLowerCase();
     if (sp.get("amount")) setAmount(sp.get("amount") as string);
     if (sp.get("memo")) setMemo(sp.get("memo") as string);
-    if (sp.get("request")) setRequestId(sp.get("request"));
+    
     if (u) {
       api("/api/users/search?q=" + encodeURIComponent(u))
         .then((r) => r.json())
@@ -155,7 +156,7 @@ export default function Send() {
     try {
       const r = await api("/api/payments", {
         method: "POST",
-        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, requestId: requestId || undefined, escrowId: to.escrowId }),
+        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, escrowId: to.escrowId }),
       });
       d = await r.json();
     } catch {}
@@ -165,7 +166,7 @@ export default function Send() {
 
   function reset() { setTo(null); setAmount(""); setMemo(""); setQuery(""); setDone(null); setMsg(""); setStep("form"); }
 
-  if (!ready || !authenticated || !me) return <main className="wrap center"><p className="small">Loading…</p></main>;
+  if (!ready || !authenticated || !me) return <Loader />;
 
   const statusText: Record<string, string> = {
     CONFIRMED: "✓ Confirmed on Tempo",

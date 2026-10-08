@@ -5,18 +5,19 @@ import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Icon from "./Icons";
 import { Wave } from "./Charts";
+import { useI18n } from "@/lib/i18n";
 
 const NAV = [
-  { href: "/dashboard", label: "Overview", icon: "home" },
-  { href: "/send", label: "Send Money", icon: "send" },
-  { href: "/send/bulk", label: "Bulk Send", icon: "users" },
-  { href: "/request", label: "Request", icon: "upload" },
-  { href: "/tips", label: "Tips", icon: "heart" },
-  { href: "/activity", label: "Transactions", icon: "repeat" },
-  { href: "/settings", label: "Settings", icon: "settings" },
+  { href: "/dashboard", key: "nav_overview", icon: "home" },
+  { href: "/send", key: "nav_send", icon: "send" },
+  { href: "/send/bulk", key: "nav_bulk", icon: "users" },
+  { href: "/tips", key: "nav_tips", icon: "heart" },
+  { href: "/activity", key: "nav_tx", icon: "repeat" },
+  { href: "/settings", key: "nav_settings", icon: "settings" },
 ];
 
 export default function AppShell({ children, badge = 0 }: { children: ReactNode; badge?: number }) {
+  const { t } = useI18n();
   const path = usePathname();
   const { getAccessToken } = usePrivy();
   const [open, setOpen] = useState(false);
@@ -38,7 +39,7 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
   useEffect(() => {
     const s = q.trim().replace(/^@/, "");
     if (s.length < 2) { setResults([]); return; }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const token = await getAccessToken();
         const r = await fetch(`/api/users/search?q=${encodeURIComponent(s)}`, { headers: { authorization: `Bearer ${token}` } });
@@ -46,7 +47,7 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
         setResults(d.users || []);
       } catch { setResults([]); }
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
@@ -58,16 +59,16 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
         <nav className="cp-nav" aria-label="Main">
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className={path === n.href ? "active" : ""} onClick={() => setOpen(false)}>
-              <Icon name={n.icon} />{n.label}
+              <Icon name={n.icon} />{t(n.key)}
             </Link>
           ))}
         </nav>
         <div className="cp-promo">
           <div className="cp-ic green" style={{ marginBottom: 14 }}><Icon name="zap" /></div>
-          <b className="t1">Join the</b>
-          <b className="t2">Social Economy ◆</b>
-          <p>Get tipped. Support creators. Be part of CashPay.</p>
-          <Link className="cp-btn primary" href="/tips">Learn More <Icon name="arrowR" size={16} /></Link>
+          <b className="t1">{t("promo1")}</b>
+          <b className="t2">{t("promo2")} ◆</b>
+          <p>{t("promoText")}</p>
+          <Link className="cp-btn primary" href="/tips">{t("learnMore")} <Icon name="arrowR" size={16} /></Link>
           <Wave />
         </div>
       </aside>
@@ -76,7 +77,7 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
           <button className="cp-iconbtn cp-menu" aria-label="Menu" onClick={() => setOpen(true)}><Icon name="menu" /></button>
           <div className="cp-search">
             <span className="ico"><Icon name="search" size={18} /></span>
-            <input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 200)} placeholder="Search users, @username, or transactions..." autoCapitalize="none" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 200)} placeholder={t("searchPh")} autoCapitalize="none" />
             {focus && results.length > 0 && (
               <div className="cp-drop">
                 {results.map((u) => (
@@ -92,7 +93,7 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
           </Link>
           <button className="cp-iconbtn" aria-label="Toggle theme" onClick={toggle}><Icon name="moon" /></button>
           <a className="cp-pill cp-hide-sm" href="https://explore.tempo.xyz" target="_blank" rel="noreferrer">
-            <Icon name="zap" size={16} />Tempo Network<Icon name="chevR" size={16} />
+            <Icon name="zap" size={16} />{t("tempoNet")}<Icon name="chevR" size={16} />
           </a>
         </header>
         <div className="cp-content">{children}</div>

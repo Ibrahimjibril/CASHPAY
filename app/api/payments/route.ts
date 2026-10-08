@@ -5,7 +5,7 @@ import { getUserId } from "@/lib/auth";
 import { TEMPO, getReceipt, matchesTransfer, sleep } from "@/lib/tempo";
 import { OUSD_ADDRESS, parseUnits6 } from "@/lib/money";
 import { notifyRecipient } from "@/lib/notify";
-import { markRequestPaid } from "@/lib/requests";
+
 
 export const maxDuration = 30;
 
@@ -16,7 +16,7 @@ const Body = z.object({
   amount: z.string().max(30),
   memo: z.string().trim().max(140).optional(),
   recipientEmail: z.string().trim().toLowerCase().email().max(120).optional(),
-  requestId: z.string().regex(UUID).optional(),
+  
   escrowId: z.string().regex(UUID).optional(),
 });
 
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   const amount = parsed.data.amount.trim();
   const memo = parsed.data.memo || null;
   const recipientEmail = parsed.data.recipientEmail ?? null;
-  const requestId = parsed.data.requestId ?? null;
+  
   const units = parseUnits6(amount);
   if (!units || units <= BigInt(0)) return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
 
@@ -92,6 +92,6 @@ export async function POST(req: Request) {
     const n = await notifyRecipient(new URL(req.url).origin, id).catch(() => ({ ok: false }));
     emailed = n.ok;
   }
-  if (status === "CONFIRMED" && requestId) await markRequestPaid(requestId, id).catch(() => {});
+  
   return NextResponse.json({ status, id, explorerUrl, emailed });
 }

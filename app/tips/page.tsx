@@ -1,4 +1,5 @@
 "use client";
+import Loader from "@/app/components/Loader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
@@ -48,7 +49,7 @@ export default function Tips() {
     else if (picked.x) router.push(`/send?x=${encodeURIComponent(picked.x)}&amount=${amt}&memo=${memo}`);
   }
 
-  if (!ready || !authenticated) return <main className="wrap center"><p className="small">Loading…</p></main>;
+  if (!ready || !authenticated) return <Loader />;
 
   const label = picked ? `@${picked.username || picked.x}` : "";
   return (

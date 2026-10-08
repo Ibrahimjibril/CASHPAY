@@ -1,4 +1,5 @@
 "use client";
+import Loader from "@/app/components/Loader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -147,7 +148,7 @@ export default function BulkSend() {
 
   function reset() { setText(""); setRows([]); setResults([]); setMsg(""); setStep("form"); }
 
-  if (!ready || !authenticated || !me) return <main className="wrap center"><p className="small">Loading…</p></main>;
+  if (!ready || !authenticated || !me) return <Loader />;
 
   const total = rows.reduce((a, r) => a + r.units, BigInt(0));
   const origin = typeof window !== "undefined" ? window.location.origin : "";

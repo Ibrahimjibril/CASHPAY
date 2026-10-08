@@ -16,7 +16,7 @@ export default function Home() {
           <div className="nav-links">
             <a href="#pay">Pay anyone</a><a href="#tips">Tips</a><a href="#tempo">Tempo</a><a href="#how">How it works</a>
           </div>
-          <a className="btn primary" href="#how">Start Sending</a>
+          <a className="btn primary" href="/login">Start Sending</a>
         </nav>
 
         <div className="hero">
@@ -25,7 +25,7 @@ export default function Home() {
             <h1>Send money. <span>Just like sending a message.</span></h1>
             <p className="lead">Send stablecoin payments to anyone using their email, username, or wallet — powered by Tempo.</p>
             <div className="cta">
-              <a className="btn primary" href="#how">Start Sending</a>
+              <a className="btn primary" href="/login">Start Sending</a>
               <a className="btn" href="#how">See How It Works</a>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function Home() {
       <div className="wrap">
         <div className="final">
           <h2>Your money. Your people.<br />One simple payment layer.</h2>
-          <a className="btn" href="#how">Start Sending</a>
+          <a className="btn" href="/login">Start Sending</a>
         </div>
         <footer><span>© CashPay</span><span>Built on Tempo</span></footer>
       </div>

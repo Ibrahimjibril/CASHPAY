@@ -106,6 +106,7 @@ export default function Dashboard() {
       <div className="cta">
         <a className="btn primary" href="/send">Send</a>
         <a className="btn" href="/activity">Activity</a>
+        <a className="btn" href="/send/bulk">Bulk send</a>
         <a className="btn" href="/request">Request</a>
         <a className="btn" href="/tips">Tip</a>
       </div>

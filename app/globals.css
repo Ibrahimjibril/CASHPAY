@@ -73,3 +73,5 @@ button.btn{font:inherit;cursor:pointer}
 .sentamt{font-size:56px;font-weight:900;letter-spacing:-.03em;line-height:1.1;margin:6px 0}
 .sentto{font-size:18px;margin:0}
 .sentfoot{opacity:.85;font-size:13px;margin:14px 0 0}
+textarea.bulk{padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:16px;resize:vertical}
+textarea.bulk:focus{outline:3px solid var(--brand);outline-offset:1px}

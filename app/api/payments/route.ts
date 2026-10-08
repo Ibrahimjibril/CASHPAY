@@ -77,14 +77,14 @@ export async function POST(req: Request) {
     const ins = await sql`
       insert into payments (sender_id, recipient_user_id, recipient_address, recipient_email, recipient_x, escrow_id, token, amount, memo, status, tx_hash)
       values (${userId}, ${recipientId}, ${to}, ${recipientEmail}, ${recipientX}, ${escrowId}, ${OUSD_ADDRESS.toLowerCase()}, ${amount}, ${memo}, 'SUBMITTED', ${hash})
-      on conflict (tx_hash) do nothing
+      on conflict do nothing
       returning id`;
     id = ins[0]?.id ?? (await sql`select id from payments where tx_hash = ${hash}`)[0]?.id;
   }
 
   const status = await verify(hash, from, to, units);
   if (status !== "SUBMITTED") {
-    await sql`update payments set status = ${status}, confirmed_at = case when ${status} = 'CONFIRMED' then now() else null end where tx_hash = ${hash}`;
+    await sql`update payments set status = ${status}, confirmed_at = case when ${status} = 'CONFIRMED' then now() else null end where tx_hash = ${hash} and leg = 0`;
   }
 
   let emailed = false;

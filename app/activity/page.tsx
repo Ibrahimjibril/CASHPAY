@@ -5,7 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 
 type Item = {
   id: string; direction: "sent" | "received"; amount: string; memo: string | null; status: string;
-  txHash: string; createdAt: string; fromLabel: string; toLabel: string; recipientEmail: string | null;
+  txHash: string; createdAt: string; fromLabel: string; toLabel: string; recipientEmail: string | null; claimable: boolean; claimStatus: string | null;
 };
 
 const fmt = (a: string) => Number(a).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
@@ -71,13 +71,14 @@ export default function Activity() {
           <div className="kv"><span>Date</span><b>{new Date(sel.createdAt).toLocaleString()}</b></div>
           <div className="kv"><span>Asset</span><b>OUSD</b></div>
           <div className="kv"><span>Network</span><b>Tempo</b></div>
+          {sel.claimable && <div className="kv"><span>Claim</span><b>{sel.claimStatus === "CLAIMED" ? "✓ Claimed" : "Waiting to be claimed"}</b></div>}
           <div className="kv"><span>Transaction</span><b>{sel.txHash.slice(0, 10)}…{sel.txHash.slice(-6)}</b></div>
         </div>
         <p className="small">Tip: take a screenshot of this receipt to share it as proof of payment.</p>
         <div className="cta">
           {explorer && <a className="btn" href={`${explorer}/tx/${sel.txHash}`} target="_blank" rel="noreferrer">View on Explorer</a>}
-          {sent && sel.recipientEmail && <button className="btn" onClick={copyLink}>{copied ? "Copied ✓" : "Copy claim link"}</button>}
-          {sent && sel.status === "CONFIRMED" && <button className="btn" disabled={busy} onClick={resend}>{busy ? "Sending…" : "Resend email"}</button>}
+          {sent && sel.claimable && <button className="btn" onClick={copyLink}>{copied ? "Copied ✓" : "Copy claim link"}</button>}
+          {sent && sel.status === "CONFIRMED" && (!sel.claimable || !!sel.recipientEmail) && <button className="btn" disabled={busy} onClick={resend}>{busy ? "Sending…" : "Resend email"}</button>}
         </div>
         {note && <p className="small">{note}</p>}
         <button className="btn primary" onClick={() => { setSel(null); setNote(""); }}>Back to activity</button>

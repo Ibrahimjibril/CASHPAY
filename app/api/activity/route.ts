@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const wallet = ((me[0]?.wallet_address as string) || "none").toLowerCase();
 
   const rows = await sql`
-    select p.id, p.amount, p.memo, p.status, p.tx_hash, p.created_at, p.recipient_email, p.recipient_address, p.sender_id,
+    select p.id, p.amount, p.memo, p.status, p.tx_hash, p.created_at, p.recipient_email, p.recipient_x, p.claim_status, p.recipient_address, p.sender_id,
            su.username as sender_username, ru.username as recipient_username
     from payments p
     join users su on su.id = p.sender_id
@@ -33,8 +33,10 @@ export async function GET(req: Request) {
       txHash: r.tx_hash,
       createdAt: r.created_at,
       fromLabel: `@${r.sender_username}`,
-      toLabel: r.recipient_username ? `@${r.recipient_username}` : r.recipient_email || short(r.recipient_address),
+      toLabel: r.recipient_username ? `@${r.recipient_username}` : r.recipient_x ? `@${r.recipient_x} (X)` : r.recipient_email || short(r.recipient_address),
       recipientEmail: sent ? r.recipient_email : null,
+      claimable: sent && !!(r.recipient_email || r.recipient_x),
+      claimStatus: r.claim_status,
     };
   });
   return NextResponse.json({ items, explorer: TEMPO.explorer });

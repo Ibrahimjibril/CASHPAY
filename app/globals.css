@@ -67,3 +67,9 @@ button.btn{font:inherit;cursor:pointer}
 .kv{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);text-align:left;font-size:14px}
 .kv span{color:var(--muted)}
 .kv b{text-align:right;word-break:break-word}
+.sentcard{width:100%;background:var(--brand);color:var(--on-brand);border-radius:28px;padding:30px 20px;text-align:center;box-shadow:0 18px 40px rgba(14,124,102,.35)}
+.sentcard img{border-radius:12px}
+.sentlabel{font-weight:800;letter-spacing:.06em;font-size:14px;margin:12px 0 0}
+.sentamt{font-size:56px;font-weight:900;letter-spacing:-.03em;line-height:1.1;margin:6px 0}
+.sentto{font-size:18px;margin:0}
+.sentfoot{opacity:.85;font-size:13px;margin:14px 0 0}

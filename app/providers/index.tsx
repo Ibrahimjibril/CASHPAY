@@ -14,7 +14,7 @@ const tempoChain: any =
   });
 
 const config: any = {
-  loginMethods: ["google", "email", "wallet"],
+  loginMethods: ["google", "email", "twitter", "wallet"],
   embeddedWallets: {
     createOnLogin: "users-without-wallets",
     ethereum: { createOnLogin: "users-without-wallets" },

@@ -6,11 +6,12 @@ import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import { CHAIN_ID, OUSD_ADDRESS, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
 
 type Person = { username: string; display_name: string; wallet_address: string };
-type Recipient = { label: string; sub?: string; address: string; email?: string };
+type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string };
 type Done = { hash: string; id?: string; status: string; explorerUrl: string; emailed: boolean };
 
 const QUICK = ["5", "10", "20", "50", "100"];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const HANDLE = /^@[a-zA-Z0-9_]{1,15}$/;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export default function Send() {
@@ -39,6 +40,18 @@ export default function Send() {
     return fetch(path, { ...init, headers: { "content-type": "application/json", authorization: `Bearer ${token}` } });
   }
 
+  async function resolveX(handle: string) {
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await api("/api/recipients/resolve-x", { method: "POST", body: JSON.stringify({ handle }) });
+      const d = await r.json();
+      if (!r.ok) setMsg(d.error || "We couldn't prepare this tip.");
+      else setTo({ label: `@${d.handle}`, sub: "Not on CashPay yet · they'll claim with X", address: d.address, x: d.handle, escrowId: d.escrowId });
+    } catch { setMsg("We couldn't prepare this tip. Please try again."); }
+    setBusy(false);
+  }
+
   useEffect(() => {
     if (!ready) return;
     if (!authenticated) { router.replace("/login"); return; }
@@ -54,6 +67,7 @@ export default function Send() {
     setPrefilled(true);
     const sp = new URLSearchParams(window.location.search);
     const u = (sp.get("u") || "").replace(/^@/, "").toLowerCase();
+    const x = (sp.get("x") || "").replace(/^@/, "").toLowerCase();
     if (sp.get("amount")) setAmount(sp.get("amount") as string);
     if (sp.get("memo")) setMemo(sp.get("memo") as string);
     if (sp.get("request")) setRequestId(sp.get("request"));
@@ -61,15 +75,18 @@ export default function Send() {
       api("/api/users/search?q=" + encodeURIComponent(u))
         .then((r) => r.json())
         .then((d) => {
-          const p = (d.users || []).find((x: Person) => x.username === u);
+          const p = (d.users || []).find((z: Person) => z.username === u);
           if (p) setTo({ label: "@" + p.username, sub: p.display_name, address: p.wallet_address });
         });
+    } else if (x) {
+      resolveX(x);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated, me]);
 
   const q = query.trim();
   const isEmail = EMAIL.test(q) && !q.startsWith("@");
+  const isHandle = HANDLE.test(q);
 
   useEffect(() => {
     const s = q.replace(/^@/, "");
@@ -138,7 +155,7 @@ export default function Send() {
     try {
       const r = await api("/api/payments", {
         method: "POST",
-        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, requestId: requestId || undefined }),
+        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, requestId: requestId || undefined, escrowId: to.escrowId }),
       });
       d = await r.json();
     } catch {}
@@ -156,7 +173,15 @@ export default function Send() {
     MISMATCH: "Sent. We're double-checking the details.",
     FAILED: "This payment did not go through.",
   };
-  const claimLink = done?.id && to?.email && typeof window !== "undefined" ? `${window.location.origin}/claim/${done.id}` : "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const claimLink = done?.id && (to?.email || to?.x) ? `${origin}/claim/${done.id}` : "";
+  const isTip = memo.startsWith("Tip");
+  const shareText = to?.x
+    ? `I just tipped @${to.x} $${amount} on CashPay 💸\n\nClaim it here:`
+    : to?.email
+    ? `I just sent someone $${amount} on CashPay 💸\n\nClaim it here:`
+    : `I just sent $${amount} on CashPay 💸`;
+  const shareUrl = claimLink || origin;
 
   return (
     <main className="wrap center">
@@ -164,25 +189,25 @@ export default function Send() {
 
       {step === "done" && done && (
         <>
-          <h1 className="h-sm">{done.status === "CONFIRMED" ? "✓ Money sent" : "Payment submitted"}</h1>
-          <div className="amt">${amount}</div>
-          <p className="small">to {to?.label}</p>
-          <p className="ok">{statusText[done.status] || statusText.SUBMITTED}</p>
+          <div className="sentcard">
+            <img src="/logo.svg" alt="" width={48} height={48} />
+            <p className="sentlabel">{isTip ? "TIP SENT 💸" : done.status === "CONFIRMED" ? "MONEY SENT ✓" : "PAYMENT SUBMITTED"}</p>
+            <div className="sentamt">${amount}</div>
+            <p className="sentto">to <b>{to?.label}</b></p>
+            <p className="sentfoot">{statusText[done.status] || statusText.SUBMITTED}</p>
+          </div>
+          <a className="btn primary" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}>Share on X</a>
           {claimLink && (
             <div className="card" style={{ width: "100%", textAlign: "left" }}>
-              <b>{done.emailed ? "We emailed them a claim link." : "Share this claim link with them:"}</b>
+              <b>{done.emailed ? "We emailed them a claim link." : "Claim link for them:"}</b>
               <p className="small" style={{ wordBreak: "break-all" }}>{claimLink}</p>
-              <div className="cta">
-                <button className="btn" onClick={() => { navigator.clipboard.writeText(claimLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? "Copied ✓" : "Copy link"}</button>
-                <a className="btn" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(`I just sent someone $${amount} on CashPay 💸\n\nClaim it here:`)}&url=${encodeURIComponent(claimLink)}`}>Share on X</a>
-              </div>
+              <button className="btn" onClick={() => { navigator.clipboard.writeText(claimLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? "Copied ✓" : "Copy link"}</button>
             </div>
           )}
           <div className="cta">
             {done.explorerUrl && <a className="btn" href={done.explorerUrl} target="_blank" rel="noreferrer">View transaction</a>}
-            {to?.label.startsWith("@") && <a className="btn" target="_blank" rel="noreferrer" href={"https://x.com/intent/post?text=" + encodeURIComponent("I just sent " + to.label + " $" + amount + " on CashPay 💸 " + window.location.origin)}>Share on X</a>}
-            <button className="btn primary" onClick={reset}>Send again</button>
-            <a className="btn" href="/dashboard">Done</a>
+            <button className="btn" onClick={reset}>Send again</button>
+            <a className="btn" href="/activity">Activity</a>
           </div>
         </>
       )}
@@ -203,6 +228,7 @@ export default function Send() {
             <p>To: <b>{to.label}</b></p>
             <p className="small">Network: Tempo · Asset: OUSD</p>
             {memo && <p className="small">Message: “{memo}”</p>}
+            {to.x && <p className="small">@{to.x} will claim this by signing in with X.</p>}
           </div>
           <div className="cta">
             <button className="btn primary" onClick={confirm}>Confirm & Send</button>
@@ -229,6 +255,11 @@ export default function Send() {
                     {p.display_name} · @{p.username}
                   </button>
                 ))}
+                {isHandle && results.length === 0 && (
+                  <button className="btn" disabled={busy} onClick={() => resolveX(q.replace(/^@/, "").toLowerCase())}>
+                    {busy ? "Preparing…" : `Send to ${q} (they can claim with X)`}
+                  </button>
+                )}
                 {isAddress(q) && <button className="btn" onClick={() => setTo({ label: short(q), address: q })}>Use address {short(q)}</button>}
                 {isEmail && <button className="btn" disabled={busy} onClick={useEmail}>{busy ? "Preparing…" : `Send to ${q}`}</button>}
               </>

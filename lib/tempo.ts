@@ -57,3 +57,19 @@ export function matchesTransfer(receipt: any, token: string, from: string, to: s
       BigInt(l.data && l.data !== "0x" ? l.data : "0x0") === amount
   );
 }
+
+export function findTransfer(receipt: any, token: string, from: string, to: string): bigint | null {
+  const logs: any[] = Array.isArray(receipt?.logs) ? receipt.logs : [];
+  for (const l of logs) {
+    if (
+      String(l.address).toLowerCase() === token.toLowerCase() &&
+      l.topics?.[0] === TRANSFER_TOPIC &&
+      l.topics.length >= 3 &&
+      topicAddr(l.topics[1]) === from.toLowerCase() &&
+      topicAddr(l.topics[2]) === to.toLowerCase()
+    ) {
+      return BigInt(l.data && l.data !== "0x" ? l.data : "0x0");
+    }
+  }
+  return null;
+}

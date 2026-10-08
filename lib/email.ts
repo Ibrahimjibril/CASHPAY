@@ -10,7 +10,7 @@ export async function sendEmailDetailed(
   p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string }
 ): Promise<{ ok: boolean; error?: string }> {
   const claim = p.kind === "claim";
-  const subject = `You received $${p.amount} from ${p.from} 💸`;
+  const subject = `You received $${p.amount} from ${p.from}`;
   const button = claim ? `Claim your $${p.amount}` : "Open CashPay";
   const note = claim
     ? "Sign in with this email address to see your money. No crypto experience needed."

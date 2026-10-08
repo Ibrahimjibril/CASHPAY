@@ -106,8 +106,8 @@ export default function Dashboard() {
       <div className="cta">
         <a className="btn primary" href="/send">Send</a>
         <a className="btn" href="/activity">Activity</a>
-        <span className="btn" aria-disabled>Request · soon</span>
-        <span className="btn" aria-disabled>Tip · soon</span>
+        <a className="btn" href="/request">Request</a>
+        <a className="btn" href="/tips">Tip</a>
       </div>
     </main>
   );

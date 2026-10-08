@@ -31,6 +31,8 @@ export default function Send() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -46,6 +48,25 @@ export default function Send() {
     api("/api/balance").then((r) => r.json()).then((d) => { if (d.total) setBalance(d.total); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
+
+  useEffect(() => {
+    if (!ready || !authenticated || !me || prefilled) return;
+    setPrefilled(true);
+    const sp = new URLSearchParams(window.location.search);
+    const u = (sp.get("u") || "").replace(/^@/, "").toLowerCase();
+    if (sp.get("amount")) setAmount(sp.get("amount") as string);
+    if (sp.get("memo")) setMemo(sp.get("memo") as string);
+    if (sp.get("request")) setRequestId(sp.get("request"));
+    if (u) {
+      api("/api/users/search?q=" + encodeURIComponent(u))
+        .then((r) => r.json())
+        .then((d) => {
+          const p = (d.users || []).find((x: Person) => x.username === u);
+          if (p) setTo({ label: "@" + p.username, sub: p.display_name, address: p.wallet_address });
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authenticated, me]);
 
   const q = query.trim();
   const isEmail = EMAIL.test(q) && !q.startsWith("@");
@@ -117,7 +138,7 @@ export default function Send() {
     try {
       const r = await api("/api/payments", {
         method: "POST",
-        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email }),
+        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, requestId: requestId || undefined }),
       });
       d = await r.json();
     } catch {}
@@ -159,6 +180,7 @@ export default function Send() {
           )}
           <div className="cta">
             {done.explorerUrl && <a className="btn" href={done.explorerUrl} target="_blank" rel="noreferrer">View transaction</a>}
+            {to?.label.startsWith("@") && <a className="btn" target="_blank" rel="noreferrer" href={"https://x.com/intent/post?text=" + encodeURIComponent("I just sent " + to.label + " $" + amount + " on CashPay 💸 " + window.location.origin)}>Share on X</a>}
             <button className="btn primary" onClick={reset}>Send again</button>
             <a className="btn" href="/dashboard">Done</a>
           </div>

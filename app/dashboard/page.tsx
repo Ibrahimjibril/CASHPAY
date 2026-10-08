@@ -1,4 +1,5 @@
 "use client";
+import Balance from "./Balance";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
@@ -101,6 +102,7 @@ export default function Dashboard() {
           </button>
         )}
       </div>
+      <Balance getToken={getAccessToken} />
       <div className="cta">
         <span className="btn" aria-disabled>Send · soon</span>
         <span className="btn" aria-disabled>Request · soon</span>

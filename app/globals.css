@@ -44,3 +44,12 @@ h2{font-size:clamp(28px,6vw,42px);letter-spacing:-.03em;line-height:1.1;margin:0
 .final .btn{background:var(--card);color:var(--ink);margin-top:20px}
 footer{padding:32px 0 48px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
 @media(prefers-reduced-motion:reduce){.phone{animation:none;opacity:1}.phone.b{display:none}}
+.center{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:48px;padding-bottom:48px;gap:6px;max-width:460px}
+.h-sm{font-size:clamp(26px,6vw,34px);letter-spacing:-.03em;margin:14px 0 6px}
+.form{width:100%;text-align:left;display:grid;gap:12px;margin-top:18px}
+.form label{display:grid;gap:6px;font-weight:600;font-size:14px}
+input{min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px}
+input:focus{outline:3px solid var(--brand);outline-offset:1px}
+.btn[disabled],[aria-disabled]{opacity:.5;pointer-events:none}
+.avatar.big{width:84px;height:84px;font-size:32px;margin-top:20px}
+.wrap>.card h3{margin:4px 0 8px}

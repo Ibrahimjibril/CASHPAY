@@ -4,6 +4,7 @@ import { sendEmailDetailed } from "@/lib/email";
 const fmt = (a: string) => Number(a).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 
 export async function notifyRecipient(origin: string, paymentId: string, force = false): Promise<{ ok: boolean; error?: string }> {
+  origin = process.env.APP_URL || origin;
   const rows = await sql`
     select p.id, p.amount, p.memo, p.status, p.recipient_email, p.emailed,
            su.username as sender_username, ru.email as user_email

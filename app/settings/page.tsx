@@ -68,7 +68,7 @@ export default function Settings() {
           <div className="cp-ph"><h2>{t("sWallet")}</h2></div>
           <div className="cp-kv"><span>{t("sAddress")}</span><b style={{ fontSize: 13 }}>{addr || "—"}</b></div>
           <div className="cp-kv"><span>{t("rNet")}</span><b>Tempo Mainnet</b></div>
-          <div className="cp-kv"><span>{t("rAsset")}</span><b>USDT · USDC · OUSD</b></div>
+          <div className="cp-kv"><span>{t("rAsset")}</span><b>USDT · USDC · OUSD · pathUSD</b></div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
             {addr && (
               <button className="cp-btn" onClick={() => { navigator.clipboard.writeText(addr); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>

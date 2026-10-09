@@ -330,3 +330,5 @@ a.cp-stat{display:block}
 .cp-asset .nm span{color:var(--muted);font-size:12.5px}
 .cp-asset .bl{font-size:16px}
 .xbtn{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.tokpick{grid-template-columns:repeat(2,1fr)}
+@media(min-width:460px){.tokpick{grid-template-columns:repeat(4,1fr)}}

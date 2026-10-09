@@ -7,6 +7,7 @@ export const TOKENS: Token[] = [
   { symbol: "USDT", name: "Tether USD", sub: "USDT0 on Tempo", address: A("14f22ca97301eb73"), decimals: 6 },
   { symbol: "USDC", name: "USD Coin", sub: "USDC.e (bridged) on Tempo", address: A("b9537d11c60e8b50"), decimals: 6 },
   { symbol: "OUSD", name: "Open USD", sub: "Recommended on Tempo", address: A("6a37da5c996874be"), decimals: 6 },
+  { symbol: "pathUSD", name: "pathUSD", sub: "Tempo routing stablecoin", address: A("0000000000000000"), decimals: 6 },
 ];
 
 export const DEFAULT_TOKEN = "OUSD";

@@ -18,13 +18,11 @@ type Data = {
   stats: { users: Stat; balance: Stat; tips: Stat; tx: Stat };
   spark: { users: number[]; balance: number[]; tips: number[]; tx: number[] };
   series: { label: string; value: number }[];
-  events: { id: string; code: string; amount: number; who: string; ts: number; tone: string; icon: string }[];
   txs: { id: string; code: string; who: string; amount: number; status: string; ts: number; tone: string; icon: string }[];
 };
 
 const TYPE: Record<string, string> = { tipRecv: "tTipRecv", payRecv: "tPayRecv", tipSent: "tTipSent", paySent: "tPaySent", claimed: "tClaimed", wallet: "tWallet" };
 const ST: Record<string, string> = { CONFIRMED: "stDone", SUBMITTED: "stPend", FAILED: "stFail" };
-const INCOMING = ["tipRecv", "payRecv", "claimed"];
 
 function StatCard({ tone, icon, label, value, change, spark, color, id, since }: { tone: string; icon: string; label: string; value: string; change: number; spark: number[]; color: string; id: string; since: string }) {
   const up = change >= 0;
@@ -41,6 +39,22 @@ function StatCard({ tone, icon, label, value, change, spark, color, id, since }:
       </div>
       <Spark data={spark} color={color} id={id} />
     </div>
+  );
+}
+
+function SettingsTile({ label, title, sub }: { label: string; title: string; sub: string }) {
+  return (
+    <Link className="cp-stat orange" href="/settings">
+      <div className="top">
+        <div className="cp-ic"><Icon name="settings" size={26} /></div>
+        <div>
+          <div className="lab">{label}</div>
+          <div className="val">{title}</div>
+          <div className="chg" style={{ color: "#ffd9a0" }}><Icon name="arrowR" size={14} /></div>
+          <div className="since">{sub}</div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -168,74 +182,71 @@ export default function Dashboard() {
 
       {err && <div className="cp-panel" style={{ marginBottom: 14 }}>{err} <button className="cp-btn" onClick={load}>{t("retry")}</button></div>}
 
-      <div className="cp-stats">
-        <StatCard tone="green" icon="users" label={t("statUsers")} value={d.stats.users.value.toLocaleString("en-US")} change={d.stats.users.change} spark={d.spark.users} color="#19e3a5" id="sg1" since={since} />
+      <div className="cp-hero">
         <StatCard tone="indigo" icon="wallet" label={t("statBalance")} value={`$${usd(d.stats.balance.value)}`} change={d.stats.balance.change} spark={d.spark.balance} color="#7f9bff" id="sg2" since={since} />
-        <StatCard tone="blue" icon="send" label={t("statTips")} value={`$${usd(d.stats.tips.value)}`} change={d.stats.tips.change} spark={d.spark.tips} color="#58b0ff" id="sg3" since={since} />
-        <StatCard tone="violet" icon="repeat" label={t("statTx")} value={d.stats.tx.value.toLocaleString("en-US")} change={d.stats.tx.change} spark={d.spark.tx} color="#a394ff" id="sg4" since={since} />
-      </div>
-
-      <div className="cp-cols">
-        <div className="cp-left">
-          <div className="cp-panel">
-            <div className="cp-ph">
-              <div>
-                <h2><Icon name="wallet" size={22} /> {t("balOverview")}</h2>
-                <div className="sub">{t("balSub", { n: range })}</div>
-              </div>
-              <select className="cp-select" value={range} onChange={(e) => setRange(Number(e.target.value))} aria-label="Range">
-                <option value={7}>{t("range7")}</option>
-                <option value={14}>{t("range14")}</option>
-                <option value={30}>{t("range30")}</option>
-              </select>
-            </div>
-            <LineChart points={d.series.slice(-range)} />
-          </div>
-
-          <div className="cp-sub">
-            <div className="cp-panel">
-              <div className="cp-ph">
-                <h2><Icon name="repeat" size={22} /> {t("recentTx")}</h2>
-                <Link href="/activity">{t("viewAll")} <Icon name="arrowR" size={14} /></Link>
-              </div>
-              <div className="cp-tr cp-th"><div>{t("colType")}</div><div className="u">{t("colUser")}</div><div>{t("colAmount")}</div><div>{t("colStatus")}</div><div className="t">{t("colTime")}</div></div>
-              {d.txs.length === 0 && <p className="cp-muted">{t("noActivity")}</p>}
-              {d.txs.map((x) => {
-                const sk = ST[x.status] || "stRev";
-                return (
-                  <div className="cp-tr" key={x.id}>
-                    <div className="ty">
-                      <span className={`cp-ic sm ${x.tone}`}><Icon name={x.icon} size={16} /></span>
-                      <span><b>{t(TYPE[x.code])}</b><span className="usub">{x.who}</span></span>
-                    </div>
-                    <div className="u">{x.who}</div>
-                    <div className={x.amount >= 0 ? "pos" : "neg"}>{x.amount >= 0 ? "+" : "-"}${usd(Math.abs(x.amount))}</div>
-                    <div><span className={`cp-st ${sk === "stDone" ? "ok" : sk === "stPend" ? "wait" : "bad"}`}>{t(sk)}</span></div>
-                    <div className="t cp-muted">{ago(x.ts, t)}</div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="cp-panel">
-              <div className="cp-ph"><h2>{t("quick")}</h2></div>
-              <div className="cp-qa">
-                <Link className="cp-q g" href="/send"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic green"><Icon name="send" /></span><b>{t("qSend")}</b><span className="s">{t("qSendS")}</span></Link>
-                <Link className="cp-q b" href="/send/bulk"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic blue"><Icon name="users" /></span><b>{t("qBulk")}</b><span className="s">{t("qBulkS")}</span></Link>
-                <Link className="cp-q p" href="/tips"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic purple"><Icon name="userPlus" /></span><b>{t("qTip")}</b><span className="s">{t("qTipS")}</span></Link>
-                <Link className="cp-q o" href="/settings"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic orange"><Icon name="settings" /></span><b>{t("qSet")}</b><span className="s">{t("qSetS")}</span></Link>
-              </div>
-            </div>
+        <div className="cp-panel cp-qpanel">
+          <div className="cp-ph"><h2>{t("quick")}</h2></div>
+          <div className="cp-qa three">
+            <Link className="cp-q g" href="/send"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic green"><Icon name="send" /></span><b>{t("qSend")}</b><span className="s">{t("qSendS")}</span></Link>
+            <Link className="cp-q p" href="/tips"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic purple"><Icon name="userPlus" /></span><b>{t("qTip")}</b><span className="s">{t("qTipS")}</span></Link>
+            <Link className="cp-q b" href="/send/bulk"><span className="arr"><Icon name="arrowR" size={16} /></span><span className="cp-ic blue"><Icon name="users" /></span><b>{t("qBulk")}</b><span className="s">{t("qBulkS")}</span></Link>
           </div>
         </div>
-
       </div>
 
-      <div className="cp-banner" style={{ marginTop: 14 }}>
-        <span className="cp-ic green"><Icon name="zap" /></span>
-        <p>{t("banner")}</p>
-        <span className="heart"><Icon name="heart" size={26} /></span>
-        <Wave />
+      <div className="cp-stats" style={{ marginBottom: 14 }}>
+        <StatCard tone="green" icon="users" label={t("statUsers")} value={d.stats.users.value.toLocaleString("en-US")} change={d.stats.users.change} spark={d.spark.users} color="#19e3a5" id="sg1" since={since} />
+        <StatCard tone="blue" icon="send" label={t("statTips")} value={`$${usd(d.stats.tips.value)}`} change={d.stats.tips.change} spark={d.spark.tips} color="#58b0ff" id="sg3" since={since} />
+        <StatCard tone="violet" icon="repeat" label={t("statTx")} value={d.stats.tx.value.toLocaleString("en-US")} change={d.stats.tx.change} spark={d.spark.tx} color="#a394ff" id="sg4" since={since} />
+        <SettingsTile label={t("sProfile")} title={t("qSet")} sub={t("qSetS")} />
+      </div>
+
+      <div className="cp-left">
+        <div className="cp-panel">
+          <div className="cp-ph">
+            <div>
+              <h2><Icon name="wallet" size={22} /> {t("balOverview")}</h2>
+              <div className="sub">{t("balSub", { n: range })}</div>
+            </div>
+            <select className="cp-select" value={range} onChange={(e) => setRange(Number(e.target.value))} aria-label="Range">
+              <option value={7}>{t("range7")}</option>
+              <option value={14}>{t("range14")}</option>
+              <option value={30}>{t("range30")}</option>
+            </select>
+          </div>
+          <LineChart points={d.series.slice(-range)} />
+        </div>
+
+        <div className="cp-banner">
+          <span className="cp-ic green"><Icon name="zap" /></span>
+          <p>{t("banner")}</p>
+          <span className="heart"><Icon name="heart" size={26} /></span>
+          <Wave />
+        </div>
+
+        <div className="cp-panel">
+          <div className="cp-ph">
+            <h2><Icon name="repeat" size={22} /> {t("recentTx")}</h2>
+            <Link href="/activity">{t("viewAll")} <Icon name="arrowR" size={14} /></Link>
+          </div>
+          <div className="cp-tr cp-th"><div>{t("colType")}</div><div className="u">{t("colUser")}</div><div>{t("colAmount")}</div><div>{t("colStatus")}</div><div className="t">{t("colTime")}</div></div>
+          {d.txs.length === 0 && <p className="cp-muted">{t("noActivity")}</p>}
+          {d.txs.map((x) => {
+            const sk = ST[x.status] || "stRev";
+            return (
+              <div className="cp-tr" key={x.id}>
+                <div className="ty">
+                  <span className={`cp-ic sm ${x.tone}`}><Icon name={x.icon} size={16} /></span>
+                  <span><b>{t(TYPE[x.code])}</b><span className="usub">{x.who}</span></span>
+                </div>
+                <div className="u">{x.who}</div>
+                <div className={x.amount >= 0 ? "pos" : "neg"}>{x.amount >= 0 ? "+" : "-"}${usd(Math.abs(x.amount))}</div>
+                <div><span className={`cp-st ${sk === "stDone" ? "ok" : sk === "stPend" ? "wait" : "bad"}`}>{t(sk)}</span></div>
+                <div className="t cp-muted">{ago(x.ts, t)}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </AppShell>
   );

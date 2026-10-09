@@ -5,23 +5,71 @@ const esc = (s: string) =>
 
 export type EmailKind = "claim" | "received";
 
+function buildHtml(p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string }) {
+  const claim = p.kind === "claim";
+  const button = claim ? `Claim your $${p.amount}` : "Open CashPay";
+  const note = claim
+    ? "Sign in with this email address to see your money. No crypto experience needed."
+    : "The money is already in your CashPay wallet.";
+  const banner = p.bannerUrl
+    ? `<tr><td style="padding:0;font-size:0;line-height:0"><img src="${esc(p.bannerUrl)}" width="600" alt="${esc(`You received $${p.amount} on CashPay`)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none"></td></tr>`
+    : "";
+  const memo = p.memo
+    ? `<p style="margin:16px 0 0;padding:12px 16px;border-left:3px solid #19e3a5;background:#0e2a44;border-radius:8px;color:#eaf2f8;font-size:15px;line-height:1.5">“${esc(p.memo)}”</p>`
+    : "";
+  const copy = claim
+    ? `<tr><td align="center" style="padding:4px 32px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8ba2b6">Button not working? Copy this link:<br><a href="${esc(p.link)}" style="color:#19e3a5;word-break:break-all">${esc(p.link)}</a></td></tr>`
+    : "";
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="supported-color-schemes" content="dark light">
+</head>
+<body style="margin:0;padding:0;background:#06101d">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#06101d">${esc(p.from)} sent you $${esc(p.amount)} on CashPay.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#06101d" style="background:#06101d">
+<tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" bgcolor="#0b1f36" style="width:100%;max-width:600px;background:#0b1f36;border-radius:24px;overflow:hidden;border:1px solid #143049">
+${banner}
+<tr><td style="padding:30px 32px 6px;font-family:Arial,Helvetica,sans-serif;color:#ffffff">
+<h1 style="margin:0 0 10px;font-size:26px;line-height:1.25;color:#ffffff;font-weight:800">You received $${esc(p.amount)}</h1>
+<p style="margin:0;font-size:16px;line-height:1.6;color:#d5e3ec">${esc(p.from)} sent you $${esc(p.amount)} through CashPay.</p>
+${memo}
+</td></tr>
+<tr><td align="center" style="padding:26px 32px 10px">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td bgcolor="#19e3a5" style="border-radius:14px;background:#19e3a5">
+<a href="${esc(p.link)}" style="display:inline-block;padding:17px 40px;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:700;color:#04241b;text-decoration:none;border-radius:14px">${esc(button)} &rarr;</a>
+</td></tr></table>
+</td></tr>
+<tr><td align="center" style="padding:10px 32px 14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#8ba2b6">${esc(note)}</td></tr>
+${copy}
+<tr><td style="padding:22px 32px 28px;font-family:Arial,Helvetica,sans-serif">
+<div style="border-top:1px solid #143049;margin:0 0 16px;font-size:0;line-height:0">&nbsp;</div>
+<p style="margin:0;text-align:center;font-size:12px;line-height:1.7;color:#6f879b"><b style="color:#19e3a5">CashPay</b> &middot; Money for the social internet<br>Powered by Tempo</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 export async function sendEmailDetailed(
   to: string,
-  p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string }
+  p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string }
 ): Promise<{ ok: boolean; error?: string }> {
   const claim = p.kind === "claim";
   const subject = `You received $${p.amount} from ${p.from}`;
   const button = claim ? `Claim your $${p.amount}` : "Open CashPay";
   const note = claim
-    ? "Sign in with this email address to see your money. No crypto experience needed."
+    ? "Sign in with this email address to see your money."
     : "The money is already in your CashPay wallet.";
-  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px">
-    <h2 style="margin:0 0 8px">YOU RECEIVED $${esc(p.amount)} 💸</h2>
-    <p>${esc(p.from)} sent you $${esc(p.amount)} through CashPay.</p>
-    ${p.memo ? `<p style="color:#555">“${esc(p.memo)}”</p>` : ""}
-    <p><a href="${esc(p.link)}" style="display:inline-block;background:#0E7C66;color:#fff;padding:14px 22px;border-radius:12px;text-decoration:none;font-weight:700">${esc(button)}</a></p>
-    <p style="color:#777;font-size:13px">${esc(note)}</p>
-  </div>`;
+  const html = buildHtml(p);
   const text = `${p.from} sent you $${p.amount} through CashPay.${p.memo ? `\n"${p.memo}"` : ""}\n\n${button}: ${p.link}\n\n${note}`;
 
   const gUser = process.env.GMAIL_USER;

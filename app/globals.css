@@ -289,3 +289,28 @@ button,a,input,select,textarea,[role=button]{touch-action:manipulation}
   .cp-banner p{font-size:13px}
   .cp-banner .cp-ic{width:34px;height:34px}
 }
+
+/* ===== dashboard order: hero (balance + quick actions), middle stats, chart, transactions last ===== */
+.cp-hero{display:grid;gap:14px;margin-bottom:14px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.cp-hero{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)}}
+@media(max-width:1000px){.cp-hero{gap:10px;margin-bottom:10px}}
+.cp-qpanel{display:flex;flex-direction:column}
+.cp-qa.three{grid-template-columns:repeat(3,1fr)}
+@media(max-width:700px){
+  .cp-qa.three .s{display:none}
+  .cp-qa.three .cp-q{min-height:92px}
+  .cp-qa.three .cp-q b{font-size:12px}
+}
+.cp-stat.orange{background:linear-gradient(135deg,#b45309 0%,#7c3a0b 55%,#4a2308 100%)}
+.cp-stat.orange .cp-ic{background:#f59e0b}
+a.cp-stat{display:block}
+
+/* clean colours in light mode */
+.cp-light .cp-q.g{background:linear-gradient(160deg,#e3f8ef,#c9eedd);border-color:#bfe6d4}
+.cp-light .cp-q.b{background:linear-gradient(160deg,#e4eeff,#cddfff);border-color:#c2d6fb}
+.cp-light .cp-q.p{background:linear-gradient(160deg,#ece6ff,#d9cfff);border-color:#cfc3fa}
+.cp-light .cp-q.o{background:linear-gradient(160deg,#fff0d8,#ffe0ae);border-color:#f5d49a}
+.cp-light .cp-q .s{color:#51677a}
+.cp-light .cp-q .arr{color:#51677a}
+.cp-light .cp-banner{background:linear-gradient(135deg,#d7f6ea,#bfeedd);border-color:#a9e3cf}
+.cp-light .cp-promo{background:linear-gradient(160deg,#dff7ee,#f4fbf8)}

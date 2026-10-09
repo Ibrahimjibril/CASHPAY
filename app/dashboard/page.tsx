@@ -229,34 +229,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="cp-right">
-          <div className="cp-panel">
-            <div className="cp-ph">
-              <h2><Icon name="zap" size={22} /> {t("recentAct")}</h2>
-              <Link href="/activity">{t("viewAll")} <Icon name="arrowR" size={14} /></Link>
-            </div>
-            {d.events.map((e) => (
-              <div className="cp-act" key={e.id}>
-                <span className={`cp-ic ${e.tone}`}><Icon name={e.icon} /></span>
-                <div className="tx">
-                  <b>{t(TYPE[e.code])}</b>
-                  <div className="s">
-                    {e.code === "wallet" ? e.who : INCOMING.includes(e.code)
-                      ? <><span className="pos">+${usd(e.amount)}</span> {t("rFrom")} {e.who}</>
-                      : <>${usd(e.amount)} {t("rTo")} {e.who}</>}
-                  </div>
-                </div>
-                <span className="tm">{ago(e.ts, t)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="cp-banner">
-            <span className="cp-ic green"><Icon name="zap" /></span>
-            <p>{t("banner")}</p>
-            <span className="heart"><Icon name="heart" size={26} /></span>
-            <Wave />
-          </div>
-        </div>
+      </div>
+
+      <div className="cp-banner" style={{ marginTop: 14 }}>
+        <span className="cp-ic green"><Icon name="zap" /></span>
+        <p>{t("banner")}</p>
+        <span className="heart"><Icon name="heart" size={26} /></span>
+        <Wave />
       </div>
     </AppShell>
   );

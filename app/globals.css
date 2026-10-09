@@ -234,3 +234,58 @@ button,a,input,select,textarea,[role=button]{touch-action:manipulation}
 .cp-langs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .cp-lang{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-weight:600;cursor:pointer;text-align:start}
 .cp-lang.on{border-color:var(--teal);background:rgba(25,227,165,.14);color:var(--teal)}
+
+/* ===== compact dashboard (phones / narrow screens) ===== */
+.cp-cols{grid-template-columns:1fr!important}
+@media(max-width:1000px){
+  .cp-content{padding:12px 12px 32px}
+  .cp-top{padding:8px 10px;gap:6px}
+  .cp-search input{height:38px;font-size:13px;border-radius:12px;padding-left:36px}
+  .cp-search .ico{left:11px;top:10px}
+  .cp-iconbtn{width:36px;height:36px;border-radius:12px}
+  .cp-welcome{margin-bottom:10px;gap:8px}
+  .cp-welcome h1{font-size:20px}
+  .cp-welcome p{font-size:12.5px;margin-top:2px}
+  .cp-wallet{padding:6px 10px;gap:8px;border-radius:12px}
+  .cp-wallet small{font-size:10px}
+  .cp-wallet b{font-size:12.5px}
+  .cp-pill{padding:8px 11px;font-size:12px;border-radius:12px}
+  .cp-stats{grid-template-columns:1fr 1fr;gap:8px}
+  .cp-stat{padding:10px 10px 38px;min-height:0;border-radius:14px}
+  .cp-stat .top{flex-direction:column;gap:6px}
+  .cp-stat .cp-ic{width:30px;height:30px;border-radius:10px}
+  .cp-stat .cp-ic svg{width:16px;height:16px}
+  .cp-stat .lab{font-size:10.5px}
+  .cp-stat .lab svg{width:11px;height:11px}
+  .cp-stat .val{font-size:18px;margin:0}
+  .cp-stat .chg{font-size:10px}
+  .cp-stat .since{font-size:9.5px}
+  .cp-spark{height:32px}
+  .cp-cols{margin-top:10px}
+  .cp-left,.cp-cols{gap:10px}
+  .cp-sub{gap:10px}
+  .cp-panel{padding:12px;border-radius:14px}
+  .cp-panel svg[role=img]{max-height:200px}
+  .cp-ph{margin-bottom:8px}
+  .cp-ph h2{font-size:14.5px;gap:6px}
+  .cp-ph h2 svg{width:16px;height:16px}
+  .cp-ph a{font-size:12px}
+  .cp-ph .sub{font-size:11px}
+  .cp-select{padding:6px 8px;font-size:12px!important;border-radius:10px!important}
+  .cp-tr{font-size:12px;padding:8px 0;gap:6px}
+  .cp-tr.cp-th{font-size:11px}
+  .cp-tr .ty b{font-size:12px}
+  .cp-st{padding:3px 8px;font-size:10.5px;border-radius:8px}
+  .cp-ic.sm{width:28px;height:28px}
+  .cp-ic.sm svg{width:14px;height:14px}
+  .cp-qa{gap:8px}
+  .cp-q{min-height:84px;padding:10px;border-radius:14px}
+  .cp-q .cp-ic{width:34px;height:34px;border-radius:11px}
+  .cp-q .cp-ic svg{width:17px;height:17px}
+  .cp-q b{font-size:12.5px;margin-top:8px}
+  .cp-q .s{font-size:10.5px}
+  .cp-q .arr{right:10px;top:12px}
+  .cp-banner{padding:12px 12px 30px;border-radius:14px}
+  .cp-banner p{font-size:13px}
+  .cp-banner .cp-ic{width:34px;height:34px}
+}

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { sql } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
 import { TEMPO, getReceipt, matchesTransfer, sleep } from "@/lib/tempo";
-import { OUSD_ADDRESS, parseUnits6 } from "@/lib/money";
+import { parseUnits6 } from "@/lib/money";
+import { DEFAULT_TOKEN, tokenByAddress, tokenBySymbol } from "@/lib/tokens";
 import { notifyRecipient } from "@/lib/notify";
 
 
@@ -18,14 +19,15 @@ const Body = z.object({
   recipientEmail: z.string().trim().toLowerCase().email().max(120).optional(),
   
   escrowId: z.string().regex(UUID).optional(),
+  token: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
 });
 
-async function verify(hash: string, from: string, to: string, units: bigint) {
+async function verify(hash: string, from: string, to: string, units: bigint, token: string) {
   for (let i = 0; i < 5; i++) {
     const r = await getReceipt(hash).catch(() => null);
     if (r) {
       if (r.status !== "0x1") return "FAILED";
-      return matchesTransfer(r, OUSD_ADDRESS, from, to, units) ? "CONFIRMED" : "MISMATCH";
+      return matchesTransfer(r, token, from, to, units) ? "CONFIRMED" : "MISMATCH";
     }
     await sleep(1200);
   }
@@ -44,6 +46,8 @@ export async function POST(req: Request) {
   const amount = parsed.data.amount.trim();
   const memo = parsed.data.memo || null;
   const recipientEmail = parsed.data.recipientEmail ?? null;
+  if (parsed.data.token && !tokenByAddress(parsed.data.token)) return NextResponse.json({ error: "Unsupported asset." }, { status: 400 });
+  const token = (tokenByAddress(parsed.data.token) ?? tokenBySymbol(DEFAULT_TOKEN)!).address.toLowerCase();
   
   const units = parseUnits6(amount);
   if (!units || units <= BigInt(0)) return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
@@ -76,13 +80,13 @@ export async function POST(req: Request) {
     const recipientId = rec[0]?.id ?? null;
     const ins = await sql`
       insert into payments (sender_id, recipient_user_id, recipient_address, recipient_email, recipient_x, escrow_id, token, amount, memo, status, tx_hash)
-      values (${userId}, ${recipientId}, ${to}, ${recipientEmail}, ${recipientX}, ${escrowId}, ${OUSD_ADDRESS.toLowerCase()}, ${amount}, ${memo}, 'SUBMITTED', ${hash})
+      values (${userId}, ${recipientId}, ${to}, ${recipientEmail}, ${recipientX}, ${escrowId}, ${token}, ${amount}, ${memo}, 'SUBMITTED', ${hash})
       on conflict do nothing
       returning id`;
     id = ins[0]?.id ?? (await sql`select id from payments where tx_hash = ${hash}`)[0]?.id;
   }
 
-  const status = await verify(hash, from, to, units);
+  const status = await verify(hash, from, to, units, token);
   if (status !== "SUBMITTED") {
     await sql`update payments set status = ${status}, confirmed_at = case when ${status} = 'CONFIRMED' then now() else null end where tx_hash = ${hash} and leg = 0`;
   }

@@ -1,7 +1,7 @@
 export const TEMPO = {
   chainId: 4217,
   rpcUrl: process.env.TEMPO_RPC_URL || "https://rpc.tempo.xyz",
-  explorer: process.env.TEMPO_EXPLORER_URL || "https://explore.tempo.xyz",
+  explorer: process.env.TEMPO_EXPLORER_URL || "https://explore.mainnet.tempo.xyz",
 };
 
 // TIP-20 stablecoins CashPay shows. All TIP-20 tokens use 6 decimals.

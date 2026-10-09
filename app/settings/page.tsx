@@ -68,14 +68,14 @@ export default function Settings() {
           <div className="cp-ph"><h2>{t("sWallet")}</h2></div>
           <div className="cp-kv"><span>{t("sAddress")}</span><b style={{ fontSize: 13 }}>{addr || "—"}</b></div>
           <div className="cp-kv"><span>{t("rNet")}</span><b>Tempo Mainnet</b></div>
-          <div className="cp-kv"><span>{t("rAsset")}</span><b>OUSD</b></div>
+          <div className="cp-kv"><span>{t("rAsset")}</span><b>USDT · USDC · OUSD</b></div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
             {addr && (
               <button className="cp-btn" onClick={() => { navigator.clipboard.writeText(addr); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
                 <Icon name={copied ? "check" : "copy"} size={16} />{copied ? t("sCopied") : t("sCopyAddr")}
               </button>
             )}
-            {addr && <a className="cp-btn" href={`https://explore.tempo.xyz/address/${addr}`} target="_blank" rel="noreferrer">{t("rExplorer")}</a>}
+            {addr && <a className="cp-btn" href={`https://explore.mainnet.tempo.xyz/address/${addr}`} target="_blank" rel="noreferrer">{t("rExplorer")}</a>}
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function Settings() {
         <div className="cp-ph"><h2>{t("sAccount")}</h2></div>
         <p className="cp-muted" style={{ marginTop: 0 }}>{t("sAccountText")}</p>
         <button className="cp-btn ghost" onClick={async () => {
-          try { sessionStorage.removeItem("cp-dash"); sessionStorage.removeItem("cp-act"); } catch {}
+          try { sessionStorage.removeItem("cp-dash"); sessionStorage.removeItem("cp-dash2"); sessionStorage.removeItem("cp-act"); } catch {}
           await logout();
           router.replace("/");
         }}><Icon name="logout" size={16} />{t("sSignOut")}</button>

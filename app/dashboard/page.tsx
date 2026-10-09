@@ -6,6 +6,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import AppShell from "../components/AppShell";
 import Icon from "../components/Icons";
 import Loader from "../components/Loader";
+import TokenIcon from "../components/TokenIcon";
 import { LineChart, Spark, Wave } from "../components/Charts";
 import { ago, shortAddr, usd } from "@/lib/ui";
 import { useI18n } from "@/lib/i18n";
@@ -15,8 +16,9 @@ type Data = {
   profile: { username: string; displayName: string; wallet: string };
   explorerUrl: string;
   badge: number;
-  stats: { users: Stat; balance: Stat; tips: Stat; tx: Stat };
-  spark: { users: number[]; balance: number[]; tips: number[]; tx: number[] };
+  stats: { people: Stat; balance: Stat; tips: Stat; tx: Stat };
+  tokens: { symbol: string; name: string; sub: string; display: string }[];
+  spark: { people: number[]; balance: number[]; tips: number[]; tx: number[] };
   series: { label: string; value: number }[];
   txs: { id: string; code: string; who: string; amount: number; status: string; ts: number; tone: string; icon: string }[];
 };
@@ -24,14 +26,14 @@ type Data = {
 const TYPE: Record<string, string> = { tipRecv: "tTipRecv", payRecv: "tPayRecv", tipSent: "tTipSent", paySent: "tPaySent", claimed: "tClaimed", wallet: "tWallet" };
 const ST: Record<string, string> = { CONFIRMED: "stDone", SUBMITTED: "stPend", FAILED: "stFail" };
 
-function StatCard({ tone, icon, label, value, change, spark, color, id, since }: { tone: string; icon: string; label: string; value: string; change: number; spark: number[]; color: string; id: string; since: string }) {
+function StatCard({ tone, icon, label, value, change, spark, color, id, since, onClick }: { tone: string; icon: string; label: string; value: string; change: number; spark: number[]; color: string; id: string; since: string; onClick?: () => void }) {
   const up = change >= 0;
   return (
-    <div className={`cp-stat ${tone}`}>
+    <div className={`cp-stat ${tone}${onClick ? " tap" : ""}`} onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}>
       <div className="top">
         <div className="cp-ic"><Icon name={icon} size={26} /></div>
         <div>
-          <div className="lab">{label} <Icon name="info" size={14} /></div>
+          <div className="lab">{label} <Icon name={onClick ? "chevD" : "info"} size={14} /></div>
           <div className="val">{value}</div>
           <div className={`chg${up ? "" : " neg"}`}><Icon name={up ? "arrowUp" : "arrowDown"} size={14} />{up ? "+" : ""}{change}%</div>
           <div className="since">{since}</div>
@@ -67,6 +69,7 @@ export default function Dashboard() {
   const [err, setErr] = useState("");
   const [range, setRange] = useState(7);
   const [copied, setCopied] = useState(false);
+  const [showAssets, setShowAssets] = useState(false);
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -75,7 +78,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     try {
-      const c = sessionStorage.getItem("cp-dash");
+      const c = sessionStorage.getItem("cp-dash2");
       if (c) setData(JSON.parse(c));
     } catch {}
   }, []);
@@ -90,7 +93,7 @@ export default function Dashboard() {
       if (!r.ok) throw new Error(d.error);
       setNeeds(false);
       setData(d);
-      try { sessionStorage.setItem("cp-dash", JSON.stringify(d)); } catch {}
+      try { sessionStorage.setItem("cp-dash2", JSON.stringify(d)); } catch {}
     } catch {
       setErr(t("dashErr"));
     }
@@ -175,7 +178,7 @@ export default function Dashboard() {
             </div>
           )}
           <a className="cp-pill" href={d.explorerUrl} target="_blank" rel="noreferrer">
-            <Icon name="zap" size={16} />{t("tempoNet")}<Icon name="chevR" size={16} />
+            <img src="/tempo-icon.svg" alt="" width={20} height={20} style={{ borderRadius: 6 }} />{t("tempoNet")}<Icon name="chevR" size={16} />
           </a>
         </div>
       </div>
@@ -183,7 +186,7 @@ export default function Dashboard() {
       {err && <div className="cp-panel" style={{ marginBottom: 14 }}>{err} <button className="cp-btn" onClick={load}>{t("retry")}</button></div>}
 
       <div className="cp-hero">
-        <StatCard tone="indigo" icon="wallet" label={t("statBalance")} value={`$${usd(d.stats.balance.value)}`} change={d.stats.balance.change} spark={d.spark.balance} color="#7f9bff" id="sg2" since={since} />
+        <StatCard tone="indigo" icon="wallet" label={t("statBalance")} value={`$${usd(d.stats.balance.value)}`} change={d.stats.balance.change} spark={d.spark.balance} color="#7f9bff" id="sg2" since={since} onClick={() => setShowAssets(true)} />
         <div className="cp-panel cp-qpanel">
           <div className="cp-ph"><h2>{t("quick")}</h2></div>
           <div className="cp-qa three">
@@ -195,7 +198,7 @@ export default function Dashboard() {
       </div>
 
       <div className="cp-stats" style={{ marginBottom: 14 }}>
-        <StatCard tone="green" icon="users" label={t("statUsers")} value={d.stats.users.value.toLocaleString("en-US")} change={d.stats.users.change} spark={d.spark.users} color="#19e3a5" id="sg1" since={since} />
+        <StatCard tone="green" icon="users" label={t("statPeople")} value={(d.stats.people?.value ?? 0).toLocaleString("en-US")} change={d.stats.people?.change ?? 0} spark={d.spark.people ?? []} color="#19e3a5" id="sg1" since={since} />
         <StatCard tone="blue" icon="send" label={t("statTips")} value={`$${usd(d.stats.tips.value)}`} change={d.stats.tips.change} spark={d.spark.tips} color="#58b0ff" id="sg3" since={since} />
         <StatCard tone="violet" icon="repeat" label={t("statTx")} value={d.stats.tx.value.toLocaleString("en-US")} change={d.stats.tx.change} spark={d.spark.tx} color="#a394ff" id="sg4" since={since} />
         <SettingsTile label={t("sProfile")} title={t("qSet")} sub={t("qSetS")} />
@@ -248,6 +251,27 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+      {showAssets && (
+        <div className="cp-modal-bg" onClick={() => setShowAssets(false)}>
+          <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <b style={{ fontSize: 18 }}>{t("balTitle")}</b>
+              <button className="cp-iconbtn" aria-label="Close" onClick={() => setShowAssets(false)}><Icon name="close" /></button>
+            </div>
+            <p className="cp-muted" style={{ margin: "4px 0 10px", fontSize: 13 }}>{t("balSub2")}</p>
+            <div className="cp-amt">${usd(d.stats.balance.value)}</div>
+            <div className="cp-assets">
+              {(d.tokens || []).map((k) => (
+                <div className="cp-asset" key={k.symbol}>
+                  <TokenIcon symbol={k.symbol} size={40} />
+                  <div className="nm"><b>{k.symbol}</b><span>{k.sub}</span></div>
+                  <b className="bl">${k.display}</b>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

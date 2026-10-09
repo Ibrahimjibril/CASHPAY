@@ -92,8 +92,8 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
             {badge > 0 && <span className="cp-badge">{badge > 9 ? "9+" : badge}</span>}
           </Link>
           <button className="cp-iconbtn" aria-label="Toggle theme" onClick={toggle}><Icon name="moon" /></button>
-          <a className="cp-pill cp-hide-sm" href="https://explore.tempo.xyz" target="_blank" rel="noreferrer">
-            <Icon name="zap" size={16} />{t("tempoNet")}<Icon name="chevR" size={16} />
+          <a className="cp-pill cp-hide-sm" href="https://explore.mainnet.tempo.xyz" target="_blank" rel="noreferrer">
+            <img src="/tempo-icon.svg" alt="" width={20} height={20} style={{ borderRadius: 6 }} />{t("tempoNet")}<Icon name="chevR" size={16} />
           </a>
         </header>
         <div className="cp-content">{children}</div>

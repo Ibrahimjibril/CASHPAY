@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
 import { TEMPO, getTokenBalance, formatUnits } from "@/lib/tempo";
-import { OUSD_ADDRESS } from "@/lib/money";
+import { TOKENS } from "@/lib/tokens";
 
 const DAY = 86400000;
 const num = (v: any) => Number(v ?? 0) || 0;
@@ -21,10 +21,8 @@ export async function GET(req: Request) {
   const wallet = ((me[0].wallet_address as string) || "").toLowerCase();
   const w = wallet || "none";
 
-  const [bal, usersRows, userTsRows, rows]: any[] = await Promise.all([
-    wallet ? getTokenBalance(OUSD_ADDRESS, wallet).catch(() => BigInt(0)) : Promise.resolve(BigInt(0)),
-    sql`select count(*)::int as n from users`,
-    sql`select created_at from users where created_at > now() - interval '9 days'`,
+  const [balList, rows]: any[] = await Promise.all([
+    Promise.all(TOKENS.map((t) => (wallet ? getTokenBalance(t.address, wallet).catch(() => BigInt(0)) : Promise.resolve(BigInt(0))))),
     sql`
       select p.id, p.amount, p.memo, p.status, p.created_at, p.sender_id, p.recipient_address, p.recipient_email, p.recipient_x,
              p.claim_status, p.claim_amount, p.claimed_at, p.claimed_by,
@@ -37,9 +35,9 @@ export async function GET(req: Request) {
       limit 300`,
   ]);
 
-  const balance = num(formatUnits(bal as bigint, 6, 6));
-  const totalUsers = num(usersRows[0].n);
-  const userTs: number[] = userTsRows.map((u: any) => ts(u.created_at));
+  const list = balList as bigint[];
+  const balance = num(formatUnits(list.reduce((a, b) => a + b, BigInt(0)), 6, 6));
+  const tokens = TOKENS.map((t, i) => ({ symbol: t.symbol, name: t.name, sub: t.sub, display: formatUnits(list[i], 6, 4) }));
 
   const evs: Ev[] = [];
   for (const r of rows) {
@@ -80,15 +78,27 @@ export async function GET(req: Request) {
   const tipsIn = conf.filter((e) => incoming(e) && e.tip);
   const inWin = (e: Ev, a: number, b: number) => e.ts >= now - a * DAY && e.ts < now - b * DAY;
 
-  const newUsers7 = userTs.filter((t) => t >= now - 7 * DAY).length;
+  // People this user has paid (only the user's own payments, never the app-wide user count)
+  const first = new Map<string, number>();
+  for (const e of conf) {
+    if (e.kind !== "sent") continue;
+    const k = e.who.toLowerCase();
+    const cur = first.get(k);
+    if (cur === undefined || e.ts < cur) first.set(k, e.ts);
+  }
+  const firsts = Array.from(first.values());
+
   const stats = {
-    users: { value: totalUsers, change: pct(totalUsers, totalUsers - newUsers7) },
+    people: {
+      value: firsts.length,
+      change: pct(firsts.filter((x) => x >= now - 7 * DAY).length, firsts.filter((x) => x >= now - 14 * DAY && x < now - 7 * DAY).length),
+    },
     balance: { value: balance, change: pct(balance, series[22].value) },
     tips: { value: sum(tipsIn), change: pct(sum(tipsIn.filter((e) => inWin(e, 7, -1))), sum(tipsIn.filter((e) => inWin(e, 14, 7)))) },
     tx: { value: conf.length, change: pct(conf.filter((e) => inWin(e, 7, -1)).length, conf.filter((e) => inWin(e, 14, 7)).length) },
   };
   const spark = {
-    users: days8.map((d) => totalUsers - userTs.filter((t) => t >= d.end).length),
+    people: days8.map((d) => firsts.filter((x) => x < d.end).length),
     balance: series.slice(-8).map((s) => s.value),
     tips: days8.map((d) => sum(tipsIn.filter((e) => e.ts < d.end))),
     tx: days8.map((d) => conf.filter((e) => e.ts >= d.start && e.ts < d.end).length),
@@ -97,12 +107,6 @@ export async function GET(req: Request) {
   const code = (e: Ev) => (e.kind === "claimed" ? "claimed" : e.kind === "received" ? (e.tip ? "tipRecv" : "payRecv") : e.tip ? "tipSent" : "paySent");
   const tone = (e: Ev) => (e.kind === "claimed" || (e.kind === "received" && e.tip) ? "green" : e.kind === "received" ? "lav" : e.tip ? "blue" : "red");
   const icon = (e: Ev) => (e.tip || e.kind === "claimed" ? "send" : e.kind === "received" ? "download" : "upload");
-
-  const events: any[] = evs.slice(0, 5).map((e) => ({
-    id: `${e.id}-${e.kind}`, code: code(e), amount: e.amount, who: e.who, ts: e.ts, tone: tone(e), icon: icon(e),
-  }));
-  events.push({ id: "wallet", code: "wallet", amount: 0, who: `@${me[0].username}`, ts: ts(me[0].created_at), tone: "blue", icon: "wallet" });
-  events.sort((a, b) => b.ts - a.ts);
 
   const txs = evs.slice(0, 5).map((e) => ({
     id: `${e.id}-${e.kind}`, code: code(e), who: e.who, amount: e.kind === "sent" ? -e.amount : e.amount,
@@ -114,8 +118,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     profile: { username: me[0].username, displayName: me[0].display_name, wallet },
     explorerUrl: wallet ? `${TEMPO.explorer}/address/${wallet}` : TEMPO.explorer,
-    badge, stats, spark, series,
-    events: events.slice(0, 5),
-    txs,
+    badge, stats, spark, series, tokens, txs,
   });
 }

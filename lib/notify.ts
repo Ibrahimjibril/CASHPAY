@@ -24,6 +24,7 @@ export async function notifyRecipient(origin: string, paymentId: string, force =
     from: `@${p.sender_username}`,
     memo: p.memo,
     bannerUrl: `${origin}/api/email-banner?id=${p.id}`,
+    xIconUrl: `${origin}/api/x-icon`,
     link: claim ? `${origin}/claim/${p.id}` : `${origin}/dashboard`,
   });
   if (r.ok) await sql`update payments set emailed = true where id = ${paymentId}`;

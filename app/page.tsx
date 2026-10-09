@@ -1,3 +1,4 @@
+const XIcon = () => (<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>);
 const steps = [
   ["01", "Choose who to pay", "Email, @username or wallet."],
   ["02", "Enter amount", "Pick a quick amount or type your own."],
@@ -16,7 +17,7 @@ export default function Home() {
           <div className="nav-links">
             <a href="#pay">Pay anyone</a><a href="#tips">Tips</a><a href="#tempo">Tempo</a><a href="#how">How it works</a>
           </div>
-          <a className="btn primary" href="/login">Start Sending</a>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><a className="xbtn" href="https://x.com/CashPaya" target="_blank" rel="noreferrer" aria-label="CashPay on X"><XIcon /></a><a className="btn primary" href="/login">Start Sending</a></div>
         </nav>
 
         <div className="hero">
@@ -95,7 +96,7 @@ export default function Home() {
           <h2>Your money. Your people.<br />One simple payment layer.</h2>
           <a className="btn" href="/login">Start Sending</a>
         </div>
-        <footer><span>© CashPay</span><span>Built on Tempo</span></footer>
+        <footer><span>© CashPay</span><a className="xbtn" href="https://x.com/CashPaya" target="_blank" rel="noreferrer" aria-label="CashPay on X"><XIcon /></a><span>Built on Tempo</span></footer>
       </div>
     </main>
   );

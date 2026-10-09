@@ -5,7 +5,7 @@ const esc = (s: string) =>
 
 export type EmailKind = "claim" | "received";
 
-function buildHtml(p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string }) {
+function buildHtml(p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string; xIconUrl?: string }) {
   const claim = p.kind === "claim";
   const button = claim ? `Claim your $${p.amount}` : "Open CashPay";
   const note = claim
@@ -50,7 +50,7 @@ ${memo}
 ${copy}
 <tr><td style="padding:22px 32px 28px;font-family:Arial,Helvetica,sans-serif">
 <div style="border-top:1px solid #143049;margin:0 0 16px;font-size:0;line-height:0">&nbsp;</div>
-<p style="margin:0;text-align:center;font-size:12px;line-height:1.7;color:#6f879b"><b style="color:#19e3a5">CashPay</b> &middot; Money for the social internet<br>Powered by Tempo</p>
+${p.xIconUrl ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 14px"><tr><td><a href="https://x.com/CashPaya" target="_blank" style="text-decoration:none"><img src="${esc(p.xIconUrl)}" width="44" height="44" alt="X" style="display:block;border:0"></a></td></tr></table>` : ""}<p style="margin:0;text-align:center;font-size:12px;line-height:1.7;color:#6f879b"><b style="color:#19e3a5">CashPay</b> &middot; Money for the social internet<br>Powered by Tempo</p>
 </td></tr>
 </table>
 </td></tr>
@@ -61,7 +61,7 @@ ${copy}
 
 export async function sendEmailDetailed(
   to: string,
-  p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string }
+  p: { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string; xIconUrl?: string }
 ): Promise<{ ok: boolean; error?: string }> {
   const claim = p.kind === "claim";
   const subject = `You received $${p.amount} from ${p.from}`;

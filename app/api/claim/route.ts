@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sql } from "@/lib/db";
 import { getPrivy, getUserId } from "@/lib/auth";
 import { getNodePrivy } from "@/lib/escrow";
-import { CHAIN_ID, OUSD_ADDRESS, encodeTransfer, parseUnits6 } from "@/lib/money";
+import { CHAIN_ID, encodeTransfer, parseUnits6 } from "@/lib/money";
 import { findTransfer, formatUnits, getReceipt, getTokenBalance, sleep } from "@/lib/tempo";
 
 export const maxDuration = 30;
@@ -18,10 +18,11 @@ export async function POST(req: Request) {
   const id = parsed.data.id;
 
   const rows = await sql`
-    select p.amount, p.status, p.recipient_x, p.claim_status, p.claim_tx, p.claim_amount, e.wallet_id, e.address as escrow_address
+    select p.amount, p.token, p.status, p.recipient_x, p.claim_status, p.claim_tx, p.claim_amount, e.wallet_id, e.address as escrow_address
     from payments p join escrows e on e.id = p.escrow_id
     where p.id = ${id}`;
   const p = rows[0];
+  const tokenAddr = String(p?.token || "").toLowerCase();
   if (!p || !p.recipient_x) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 404 });
   if (p.status !== "CONFIRMED") {
     return NextResponse.json({ error: "This payment is still being confirmed. Try again in a moment." }, { status: 409 });
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       const r = await getReceipt(hash).catch(() => null);
       if (r) {
         if (r.status !== "0x1") return "FAILED";
-        const v = findTransfer(r, OUSD_ADDRESS, escrow, to);
+        const v = findTransfer(r, tokenAddr, escrow, to);
         if (v === null) return "FAILED";
         await sql`update payments set claim_status = 'CLAIMED', claimed_at = now(), claim_amount = ${formatUnits(v, 6, 6)} where id = ${id}`;
         return "CLAIMED";
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
   if (!lock[0]) return NextResponse.json({ error: "This claim is already being processed. Please wait a moment." }, { status: 409 });
 
   try {
-    const bal = await getTokenBalance(OUSD_ADDRESS, escrow);
+    const bal = await getTokenBalance(tokenAddr, escrow);
     const want = parseUnits6(String(p.amount)) ?? BigInt(0);
     const units = want < bal ? want : bal;
     const reserve = parseUnits6(process.env.CLAIM_FEE_RESERVE || "0.02") ?? BigInt(20000);
@@ -91,8 +92,8 @@ export async function POST(req: Request) {
       params: {
         transaction: {
           type: 118,
-          fee_token: OUSD_ADDRESS,
-          calls: [{ to: OUSD_ADDRESS, data: encodeTransfer(to, units - reserve) }],
+          fee_token: tokenAddr,
+          calls: [{ to: tokenAddr, data: encodeTransfer(to, units - reserve) }],
         },
       },
     });

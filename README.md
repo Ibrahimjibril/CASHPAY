@@ -80,7 +80,7 @@ Every payment is **verified on-chain by the server**, not trusted from the brows
     EMAIL_FROM                  optional, sender for Resend
     CLAIM_FEE_RESERVE           optional, network fee reserve kept on X claims (default 0.02)
     TEMPO_RPC_URL               optional, default https://rpc.tempo.xyz
-    TEMPO_EXPLORER_URL          optional, default https://explore.tempo.xyz
+    TEMPO_EXPLORER_URL          optional, default https://explore.mainnet.tempo.xyz
     NEXT_PUBLIC_TEMPO_CHAIN_ID  optional, default 4217
 
 ### Database schema

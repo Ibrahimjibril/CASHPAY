@@ -1,10 +1,12 @@
 "use client";
-import Loader from "@/app/components/Loader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
-import { CHAIN_ID, OUSD_ADDRESS, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
+import Loader from "@/app/components/Loader";
+import TokenPicker from "@/app/components/TokenPicker";
+import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
+import { tokenBySymbol } from "@/lib/tokens";
 
 type Person = { username: string; display_name: string; wallet_address: string };
 type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string };
@@ -22,7 +24,8 @@ export default function Send() {
   const router = useRouter();
 
   const [me, setMe] = useState<{ wallet_address: string | null } | null>(null);
-  const [balance, setBalance] = useState<string | null>(null);
+  const [bals, setBals] = useState<Record<string, string>>({});
+  const [tok, setTok] = useState("OUSD");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Person[]>([]);
   const [to, setTo] = useState<Recipient | null>(null);
@@ -33,7 +36,6 @@ export default function Send() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
-  
   const [prefilled, setPrefilled] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
@@ -59,7 +61,18 @@ export default function Send() {
     api("/api/profile").then((r) => r.json()).then((d) => {
       if (!d.profile) router.replace("/dashboard"); else setMe(d.profile);
     });
-    api("/api/balance").then((r) => r.json()).then((d) => { if (d.total) setBalance(d.total); }).catch(() => {});
+    api("/api/balance").then((r) => r.json()).then((d) => {
+      const m: Record<string, string> = {};
+      let best = "OUSD";
+      let hi = BigInt(-1);
+      for (const x of d.tokens || []) {
+        m[x.symbol] = x.balance;
+        const u = parseUnits6(x.balance) ?? BigInt(0);
+        if (u > hi) { hi = u; best = x.symbol; }
+      }
+      setBals(m);
+      setTok(best);
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
 
@@ -71,7 +84,6 @@ export default function Send() {
     const x = (sp.get("x") || "").replace(/^@/, "").toLowerCase();
     if (sp.get("amount")) setAmount(sp.get("amount") as string);
     if (sp.get("memo")) setMemo(sp.get("memo") as string);
-    
     if (u) {
       api("/api/users/search?q=" + encodeURIComponent(u))
         .then((r) => r.json())
@@ -119,15 +131,16 @@ export default function Send() {
     const units = parseUnits6(amount);
     if (!to) return setMsg("Choose who you want to pay.");
     if (!units || units <= BigInt(0)) return setMsg("Enter a valid amount.");
-    const bal = balance ? parseUnits6(balance) : null;
-    if (bal !== null && units > bal) return setMsg("You don't have enough balance to complete this payment.");
+    const bal = parseUnits6(bals[tok] || "0") ?? BigInt(0);
+    if (units > bal) return setMsg(`You don't have enough ${tok} to complete this payment.`);
     if (me?.wallet_address && to.address.toLowerCase() === me.wallet_address.toLowerCase()) return setMsg("You can't send money to yourself.");
     setStep("review");
   }
 
   async function confirm() {
     const units = parseUnits6(amount);
-    if (!to || !units) return;
+    const T = tokenBySymbol(tok);
+    if (!to || !units || !T) return;
     setStep("sending");
     setMsg("");
     let hash = "";
@@ -139,8 +152,8 @@ export default function Send() {
         transaction: {
           type: 118,
           chainId: CHAIN_ID,
-          feeToken: OUSD_ADDRESS,
-          calls: [{ to: OUSD_ADDRESS, data: encodeTransfer(to.address, units) }],
+          feeToken: T.address,
+          calls: [{ to: T.address, data: encodeTransfer(to.address, units) }],
         },
         wallet,
       } as any);
@@ -156,7 +169,7 @@ export default function Send() {
     try {
       const r = await api("/api/payments", {
         method: "POST",
-        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, escrowId: to.escrowId }),
+        body: JSON.stringify({ txHash: hash, to: to.address, amount, memo, recipientEmail: to.email, escrowId: to.escrowId, token: T.address }),
       });
       d = await r.json();
     } catch {}
@@ -194,7 +207,7 @@ export default function Send() {
             <img src="/logo.svg" alt="" width={48} height={48} />
             <p className="sentlabel">{isTip ? "TIP SENT 💸" : done.status === "CONFIRMED" ? "MONEY SENT ✓" : "PAYMENT SUBMITTED"}</p>
             <div className="sentamt">${amount}</div>
-            <p className="sentto">to <b>{to?.label}</b></p>
+            <p className="sentto">{tok} to <b>{to?.label}</b></p>
             <p className="sentfoot">{statusText[done.status] || statusText.SUBMITTED}</p>
           </div>
           <a className="btn primary" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}>Share on X</a>
@@ -227,7 +240,7 @@ export default function Send() {
             <div className="small">You are sending</div>
             <div className="amt">${amount}</div>
             <p>To: <b>{to.label}</b></p>
-            <p className="small">Network: Tempo · Asset: OUSD</p>
+            <p className="small">Network: Tempo · Asset: {tok}</p>
             {memo && <p className="small">Message: “{memo}”</p>}
             {to.x && <p className="small">@{to.x} will claim this by signing in with X.</p>}
           </div>
@@ -241,8 +254,8 @@ export default function Send() {
       {step === "form" && (
         <>
           <h1 className="h-sm">Send money</h1>
-          {balance !== null && <p className="small">Balance: ${balance}</p>}
           <div className="form">
+            <TokenPicker value={tok} onChange={setTok} balances={bals} />
             {to ? (
               <div className="card">
                 <b>{to.label}</b> {to.sub && <span className="small">· {to.sub}</span>}

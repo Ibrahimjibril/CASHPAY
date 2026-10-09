@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getPrivy, getUserId } from "@/lib/auth";
-import { TEMPO, TOKENS, getTokenBalance, formatUnits } from "@/lib/tempo";
+import { TEMPO, getTokenBalance, formatUnits } from "@/lib/tempo";
+import { TOKENS } from "@/lib/tokens";
 
 export async function GET(req: Request) {
   const userId = await getUserId(req);
@@ -16,21 +17,28 @@ export async function GET(req: Request) {
     address = pu.wallet?.address ?? null;
     if (address) await sql`update users set wallet_address = ${address} where id = ${userId}`;
   }
+
+  const zero = TOKENS.map((t) => ({ symbol: t.symbol, name: t.name, sub: t.sub, address: t.address, balance: "0.000000", display: "0.00" }));
   if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) {
-    return NextResponse.json({ total: "0.00", tokens: [], explorerUrl: null });
+    return NextResponse.json({ total: "0.00", tokens: zero, explorerUrl: null });
   }
 
-  try {
-    const results = await Promise.all(
-      TOKENS.map(async (t) => ({ symbol: t.symbol, decimals: t.decimals, raw: await getTokenBalance(t.address, address as string) }))
-    );
-    const sum = results.reduce((a, r) => a + r.raw, BigInt(0));
-    return NextResponse.json({
-      total: formatUnits(sum, 6, 2),
-      tokens: results.map((r) => ({ symbol: r.symbol, display: formatUnits(r.raw, r.decimals, 2) })),
-      explorerUrl: `${TEMPO.explorer}/address/${address}`,
-    });
-  } catch {
+  let failed = 0;
+  const list: bigint[] = await Promise.all(
+    TOKENS.map(async (t) => {
+      try { return await getTokenBalance(t.address, address as string); } catch { failed++; return BigInt(0); }
+    })
+  );
+  if (failed === TOKENS.length) {
     return NextResponse.json({ error: "Tempo is taking longer than expected. We're checking." }, { status: 502 });
   }
+  const sum = list.reduce((a, b) => a + b, BigInt(0));
+  return NextResponse.json({
+    total: formatUnits(sum, 6, 2),
+    tokens: TOKENS.map((t, i) => ({
+      symbol: t.symbol, name: t.name, sub: t.sub, address: t.address,
+      balance: formatUnits(list[i], 6, 6), display: formatUnits(list[i], 6, 4),
+    })),
+    explorerUrl: `${TEMPO.explorer}/address/${address}`,
+  });
 }

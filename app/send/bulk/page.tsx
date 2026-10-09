@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
-import { CHAIN_ID, OUSD_ADDRESS, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
+import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
+import { tokenBySymbol } from "@/lib/tokens";
+import TokenPicker from "@/app/components/TokenPicker";
 
 type Kind = "user" | "email" | "x" | "wallet";
 type Row = { label: string; kind: Kind; address: string; amount: string; units: bigint; email?: string; x?: string; escrowId?: string };
@@ -24,6 +26,8 @@ export default function BulkSend() {
 
   const [me, setMe] = useState<{ wallet_address: string | null } | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
+  const [bals, setBals] = useState<Record<string, string>>({});
+  const [tok, setTok] = useState("OUSD");
   const [text, setText] = useState("");
   const [common, setCommon] = useState("");
   const [memo, setMemo] = useState("");
@@ -46,7 +50,7 @@ export default function BulkSend() {
     api("/api/profile").then((r) => r.json()).then((d) => {
       if (!d.profile) router.replace("/dashboard"); else setMe(d.profile);
     });
-    api("/api/balance").then((r) => r.json()).then((d) => { if (d.total) setBalance(d.total); }).catch(() => {});
+    api("/api/balance").then((r) => r.json()).then((d) => { const m: Record<string, string> = {}; let best = "OUSD"; let hi = BigInt(-1); for (const x of d.tokens || []) { m[x.symbol] = x.balance; const u = parseUnits6(x.balance) ?? BigInt(0); if (u > hi) { hi = u; best = x.symbol; } } setBals(m); setTok(best); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
 
@@ -104,7 +108,7 @@ export default function BulkSend() {
       setMsg("You can't include yourself in the list."); setStep("form"); return;
     }
     const total = rs.reduce((a, r) => a + r.units, BigInt(0));
-    const bal = balance ? parseUnits6(balance) : null;
+    const bal = bals[tok] ? parseUnits6(bals[tok]) : null;
     if (bal !== null && total > bal) { setMsg("You don't have enough balance to complete this payment."); setStep("form"); return; }
     setRows(rs);
     setStep("review");
@@ -118,9 +122,10 @@ export default function BulkSend() {
       const wallet: any = wallets.find((w: any) => w.walletClientType === "privy") ?? wallets[0];
       if (!wallet) throw new Error("Your wallet isn't ready yet");
       if (me?.wallet_address && wallet.address.toLowerCase() !== me.wallet_address.toLowerCase()) throw new Error("Wallet mismatch");
-      const calls = rows.map((r) => ({ to: OUSD_ADDRESS, data: encodeTransfer(r.address, r.units) }));
+      const T = tokenBySymbol(tok)!;
+      const calls = rows.map((r) => ({ to: T.address, data: encodeTransfer(r.address, r.units) }));
       const out: any = await sendTransaction({
-        transaction: { type: 118, chainId: CHAIN_ID, feeToken: OUSD_ADDRESS, calls },
+        transaction: { type: 118, chainId: CHAIN_ID, feeToken: T.address, calls },
         wallet,
       } as any);
       if (!out?.hash) throw new Error("No transaction hash returned");
@@ -136,6 +141,7 @@ export default function BulkSend() {
         method: "POST",
         body: JSON.stringify({
           txHash: hash,
+          token: tokenBySymbol(tok)?.address,
           items: rows.map((x) => ({ to: x.address, amount: x.amount, memo: memo || undefined, recipientEmail: x.email, escrowId: x.escrowId })),
         }),
       });
@@ -222,7 +228,7 @@ export default function BulkSend() {
           <div className="card" style={{ width: "100%", textAlign: "left" }}>
             <div className="small">Total</div>
             <div className="amt">${money(total)}</div>
-            <p className="small">{rows.length} recipients · Network: Tempo · Asset: OUSD</p>
+            <p className="small">{rows.length} recipients · Network: Tempo · Asset: {tok}</p>
             {memo && <p className="small">Message: “{memo}”</p>}
           </div>
           {msg && <p className="small">{msg}</p>}
@@ -236,7 +242,7 @@ export default function BulkSend() {
       {step === "form" && (
         <>
           <h1 className="h-sm">Bulk send</h1>
-          {balance !== null && <p className="small">Balance: ${balance}</p>}
+          <TokenPicker value={tok} onChange={setTok} balances={bals} />
           <div className="form">
             <label>
               Recipients (one per line: recipient amount)

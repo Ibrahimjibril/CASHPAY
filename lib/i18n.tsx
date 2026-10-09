@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
+import { EXTRA } from "./i18n-extra";
 
 export type Lang = "en" | "zh" | "fr" | "ar" | "hi" | "ha";
 export const LANGS: { code: Lang; name: string }[] = [
@@ -175,7 +176,14 @@ const ha: Dict = {
   agoS: "{n} dakika da suka wuce", agoM: "{n} minti da suka wuce", agoH: "{n} awa da suka wuce", agoD: "{n} kwana da suka wuce",
 };
 
-const D: Record<Lang, Dict> = { en, zh, fr, ar, hi, ha };
+const D: Record<Lang, Dict> = {
+  en: { ...en, ...EXTRA.en },
+  zh: { ...zh, ...EXTRA.zh },
+  fr: { ...fr, ...EXTRA.fr },
+  ar: { ...ar, ...EXTRA.ar },
+  hi: { ...hi, ...EXTRA.hi },
+  ha: { ...ha, ...EXTRA.ha },
+};
 
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: string, v?: Record<string, string | number>) => string };
 const C = createContext<Ctx>({ lang: "en", setLang: () => {}, t: (k) => k });

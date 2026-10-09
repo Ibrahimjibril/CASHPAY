@@ -314,3 +314,19 @@ a.cp-stat{display:block}
 .cp-light .cp-q .arr{color:#51677a}
 .cp-light .cp-banner{background:linear-gradient(135deg,#d7f6ea,#bfeedd);border-color:#a9e3cf}
 .cp-light .cp-promo{background:linear-gradient(160deg,#dff7ee,#f4fbf8)}
+
+/* tokens, assets modal, X button */
+.tokpick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tok{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.tok b{font-size:14px}
+.tok small{color:var(--muted);font-size:11.5px}
+.tok.on{border-color:var(--brand);background:var(--soft)}
+.cp-stat.tap{cursor:pointer}
+.cp-stat.tap:active{transform:scale(.99)}
+.cp-assets{display:grid;gap:10px;margin-top:12px;text-align:left}
+.cp-asset{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--panel2)}
+.cp-asset .nm{flex:1;min-width:0}
+.cp-asset .nm b{display:block}
+.cp-asset .nm span{color:var(--muted);font-size:12.5px}
+.cp-asset .bl{font-size:16px}
+.xbtn{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line);background:var(--card);color:var(--ink)}

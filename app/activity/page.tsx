@@ -11,7 +11,7 @@ import { useI18n } from "@/lib/i18n";
 type Item = {
   id: string; direction: "sent" | "received"; amount: string; memo: string | null; status: string;
   txHash: string; createdAt: string; fromLabel: string; toLabel: string; recipientEmail: string | null;
-  claimable: boolean; claimStatus: string | null;
+  claimable: boolean; claimStatus: string | null; token: string;
 };
 type Filter = "all" | "received" | "sent" | "tips";
 
@@ -144,7 +144,7 @@ export default function Activity() {
               <div className="cp-kv"><span>{t("rTo")}</span><b>{sent ? sel.toLabel : t("rYou")}</b></div>
               {sel.memo && <div className="cp-kv"><span>{t("rMsg")}</span><b>“{sel.memo}”</b></div>}
               <div className="cp-kv"><span>{t("rDate")}</span><b>{new Date(sel.createdAt).toLocaleString()}</b></div>
-              <div className="cp-kv"><span>{t("rAsset")}</span><b>OUSD</b></div>
+              <div className="cp-kv"><span>{t("rAsset")}</span><b>{sel.token}</b></div>
               <div className="cp-kv"><span>{t("rNet")}</span><b>Tempo</b></div>
               {sel.claimable && <div className="cp-kv"><span>{t("rClaim")}</span><b>{sel.claimStatus === "CLAIMED" ? t("rClaimed") : t("rWaiting")}</b></div>}
               <div className="cp-kv"><span>{t("rTx")}</span><b>{sel.txHash.slice(0, 10)}...{sel.txHash.slice(-6)}</b></div>

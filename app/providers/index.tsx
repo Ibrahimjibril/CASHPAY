@@ -13,7 +13,7 @@ const tempoChain: any =
     name: "Tempo",
     nativeCurrency: { name: "USD", symbol: "USD", decimals: 18 },
     rpcUrls: { default: { http: ["https://rpc.tempo.xyz"] } },
-    blockExplorers: { default: { name: "Tempo Explorer", url: "https://explore.tempo.xyz" } },
+    blockExplorers: { default: { name: "Tempo Explorer", url: "https://explore.mainnet.tempo.xyz" } },
   });
 
 const config: any = {

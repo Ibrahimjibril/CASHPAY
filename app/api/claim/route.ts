@@ -8,14 +8,31 @@ import { findTransfer, formatUnits, getReceipt, getTokenBalance, sleep } from "@
 
 export const maxDuration = 30;
 
-const Body = z.object({ id: z.string().regex(/^[0-9a-fA-F-]{36}$/) });
+const Body = z.object({
+  id: z.string().regex(/^[0-9a-fA-F-]{36}$/).optional(),
+  batch: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+});
 
 export async function POST(req: Request) {
   const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 400 });
-  const id = parsed.data.id;
+  let rid = parsed.data.id;
+  if (!rid && parsed.data.batch) {
+    const pu0: any = await getPrivy().getUser(userId);
+    const x0 = String(pu0?.twitter?.username || "").toLowerCase();
+    if (!x0) return NextResponse.json({ error: "Please sign in with your X account to claim." }, { status: 403 });
+    const found = await sql`
+      select id from payments
+      where tx_hash = ${parsed.data.batch.toLowerCase()} and recipient_x = ${x0}
+      order by (claim_status is null) desc, leg
+      limit 1`;
+    if (!found[0]) return NextResponse.json({ error: `There's no tip for @${x0} in this batch.` }, { status: 404 });
+    rid = found[0].id;
+  }
+  if (!rid) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 400 });
+  const id: string = rid;
 
   const rows = await sql`
     select p.amount, p.token, p.status, p.recipient_x, p.claim_status, p.claim_tx, p.claim_amount, e.wallet_id, e.address as escrow_address

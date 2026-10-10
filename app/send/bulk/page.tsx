@@ -7,6 +7,7 @@ import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
 import TokenPicker from "@/app/components/TokenPicker";
+import { tweetChunks, tweetHref } from "@/lib/share";
 
 type Kind = "user" | "email" | "x" | "wallet";
 type Row = { label: string; kind: Kind; address: string; amount: string; units: bigint; email?: string; x?: string; escrowId?: string };
@@ -38,6 +39,7 @@ export default function BulkSend() {
   const [results, setResults] = useState<Result[]>([]);
   const [explorer, setExplorer] = useState("");
   const [copied, setCopied] = useState(-1);
+  const [batchHash, setBatchHash] = useState("");
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -130,6 +132,7 @@ export default function BulkSend() {
       } as any);
       if (!out?.hash) throw new Error("No transaction hash returned");
       hash = out.hash;
+      setBatchHash(hash);
     } catch (e: any) {
       const detail = String(e?.shortMessage || e?.message || e).slice(0, 220);
       setMsg(`We couldn't complete this payment. Your funds were not charged. [${detail}]`);
@@ -152,7 +155,7 @@ export default function BulkSend() {
     setStep("done");
   }
 
-  function reset() { setText(""); setRows([]); setResults([]); setMsg(""); setStep("form"); }
+  function reset() { setText(""); setRows([]); setResults([]); setMsg(""); setBatchHash(""); setStep("form"); }
 
   if (!ready || !authenticated || !me) return <Loader />;
 
@@ -193,6 +196,8 @@ export default function BulkSend() {
             })}
           </div>
           <div className="cta">
+            {batchHash && rows.some((r) => r.x) && tweetChunks(rows.filter((r) => r.x).map((r) => r.x as string)).map((c, i, arr) => (<a key={i} className="btn primary" target="_blank" rel="noreferrer" href={tweetHref(c, `${origin}/batch/${batchHash}`)}>{arr.length > 1 ? `Share on X (${i + 1}/${arr.length})` : "Share all on X"}</a>))}
+            {batchHash && <button className="btn" onClick={() => { navigator.clipboard.writeText(`${origin}/batch/${batchHash}`); }}>Copy batch link</button>}
             {explorer && <a className="btn" href={explorer} target="_blank" rel="noreferrer">View transaction</a>}
             <button className="btn" onClick={reset}>New batch</button>
             <a className="btn primary" href="/activity">Activity</a>

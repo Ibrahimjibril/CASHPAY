@@ -6,6 +6,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
+import { toSite } from "@/lib/site";
 import TokenPicker from "@/app/components/TokenPicker";
 import { tweetChunks, tweetHref } from "@/lib/share";
 
@@ -187,7 +188,7 @@ export default function BulkSend() {
                     <div className="cta" style={{ marginTop: 8 }}>
                       <button className="btn" onClick={() => { navigator.clipboard.writeText(link); setCopied(i); setTimeout(() => setCopied(-1), 1500); }}>{copied === i ? "Copied ✓" : "Copy claim link"}</button>
                       {r.kind === "x" && (
-                        <a className="btn" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(`I just tipped @${r.x} $${r.amount} on CashPay 💸\n\nClaim it here:`)}&url=${encodeURIComponent(link)}`}>Share on X</a>
+                        <a className="btn" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(`I just tipped @${r.x} $${r.amount} on CashPay 💸\n\nClaim it here:`)}&url=${encodeURIComponent(toSite(link))}`}>Share on X</a>
                       )}
                     </div>
                   )}
@@ -196,7 +197,7 @@ export default function BulkSend() {
             })}
           </div>
           <div className="cta">
-            {batchHash && rows.some((r) => r.x) && tweetChunks(rows.filter((r) => r.x).map((r) => r.x as string)).map((c, i, arr) => (<a key={i} className="btn primary" target="_blank" rel="noreferrer" href={tweetHref(c, `${origin}/batch/${batchHash}`)}>{arr.length > 1 ? `Share on X (${i + 1}/${arr.length})` : "Share all on X"}</a>))}
+            {batchHash && rows.some((r) => r.x) && tweetChunks(rows.filter((r) => r.x).map((r) => r.x as string)).map((c, i, arr) => (<a key={i} className="btn primary" target="_blank" rel="noreferrer" href={tweetHref(c, toSite(`${origin}/batch/${batchHash}`))}>{arr.length > 1 ? `Share on X (${i + 1}/${arr.length})` : "Share all on X"}</a>))}
             {batchHash && <button className="btn" onClick={() => { navigator.clipboard.writeText(`${origin}/batch/${batchHash}`); }}>Copy batch link</button>}
             {explorer && <a className="btn" href={explorer} target="_blank" rel="noreferrer">View transaction</a>}
             <button className="btn" onClick={reset}>New batch</button>

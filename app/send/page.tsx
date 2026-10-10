@@ -7,6 +7,7 @@ import Loader from "@/app/components/Loader";
 import TokenPicker from "@/app/components/TokenPicker";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
+import { toSite } from "@/lib/site";
 
 type Person = { username: string; display_name: string; wallet_address: string };
 type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string };
@@ -210,7 +211,7 @@ export default function Send() {
             <p className="sentto">{tok} to <b>{to?.label}</b></p>
             <p className="sentfoot">{statusText[done.status] || statusText.SUBMITTED}</p>
           </div>
-          <a className="btn primary" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}>Share on X</a>
+          <a className="btn primary" target="_blank" rel="noreferrer" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(toSite(shareUrl))}`}>Share on X</a>
           {claimLink && (
             <div className="card" style={{ width: "100%", textAlign: "left" }}>
               <b>{done.emailed ? "We emailed them a claim link." : "Claim link for them:"}</b>

@@ -4,7 +4,7 @@
 
 CashPay is a stablecoin payments app built on **Tempo mainnet**. You can pay anyone with a **@username**, an **email address**, an **X (Twitter) handle** or a **wallet address**. The person you pay does not need a wallet, crypto knowledge or a CashPay account in advance: they get a claim link, sign in, and the money is theirs.
 
-- Live app: https://cashpay-tau.vercel.app
+- Live app: https://www.cashpayt.xyz
 - Repository: https://github.com/Ibrahimjibril/CASHPAY
 - Built by: Ibrahimjibril
 

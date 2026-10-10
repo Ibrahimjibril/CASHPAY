@@ -1,11 +1,12 @@
 "use client";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Icon from "./Icons";
 import { Wave } from "./Charts";
 import { useI18n } from "@/lib/i18n";
+import { ago, usd } from "@/lib/ui";
 
 const NAV = [
   { href: "/dashboard", key: "nav_overview", icon: "home" },
@@ -16,15 +17,26 @@ const NAV = [
   { href: "/settings", key: "nav_settings", icon: "settings" },
 ];
 
-export default function AppShell({ children, badge = 0 }: { children: ReactNode; badge?: number }) {
+type Notif = { id: string; kind: string; who: string; amount: number; ts: number; unread: boolean };
+const TXT: Record<string, string> = { tipRecv: "nTipRecv", payRecv: "nPayRecv", tipClaimed: "nTipClaimed" };
+const TONE: Record<string, string> = { tipRecv: "green", payRecv: "lav", tipClaimed: "blue" };
+const ICON: Record<string, string> = { tipRecv: "send", payRecv: "download", tipClaimed: "check" };
+
+export default function AppShell({ children }: { children: ReactNode; badge?: number }) {
   const { t } = useI18n();
   const path = usePathname();
   const { getAccessToken } = usePrivy();
+  const tokRef = useRef(getAccessToken);
+  tokRef.current = getAccessToken;
+
   const [open, setOpen] = useState(false);
   const [light, setLight] = useState(false);
   const [q, setQ] = useState("");
   const [focus, setFocus] = useState(false);
   const [results, setResults] = useState<{ username: string; display_name: string }[]>([]);
+  const [nOpen, setNOpen] = useState(false);
+  const [items, setItems] = useState<Notif[]>([]);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     try { setLight(localStorage.getItem("cp-theme") === "light"); } catch {}
@@ -36,19 +48,44 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
     try { localStorage.setItem("cp-theme", n ? "light" : "dark"); } catch {}
   }
 
+  const loadNotifs = useCallback(async () => {
+    try {
+      const token = await tokRef.current();
+      const r = await fetch("/api/notifications", { headers: { authorization: `Bearer ${token}` } });
+      if (!r.ok) return;
+      const d = await r.json();
+      setItems(d.items || []);
+      setUnread(d.unread || 0);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    loadNotifs();
+    const id = setInterval(loadNotifs, 60000);
+    return () => clearInterval(id);
+  }, [loadNotifs]);
+
+  async function markAll() {
+    setItems((v) => v.map((n) => ({ ...n, unread: false })));
+    setUnread(0);
+    try {
+      const token = await tokRef.current();
+      await fetch("/api/notifications/read", { method: "POST", headers: { authorization: `Bearer ${token}` } });
+    } catch {}
+  }
+
   useEffect(() => {
     const s = q.trim().replace(/^@/, "");
     if (s.length < 2) { setResults([]); return; }
     const timer = setTimeout(async () => {
       try {
-        const token = await getAccessToken();
+        const token = await tokRef.current();
         const r = await fetch(`/api/users/search?q=${encodeURIComponent(s)}`, { headers: { authorization: `Bearer ${token}` } });
         const d = await r.json();
         setResults(d.users || []);
       } catch { setResults([]); }
     }, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   return (
@@ -87,14 +124,36 @@ export default function AppShell({ children, badge = 0 }: { children: ReactNode;
             )}
           </div>
           <div className="grow" />
-          <Link className="cp-iconbtn" href="/activity" aria-label="Notifications">
+          <button className="cp-iconbtn" aria-label={t("notifTitle")} onClick={() => { const n = !nOpen; setNOpen(n); if (n) loadNotifs(); }}>
             <Icon name="bell" />
-            {badge > 0 && <span className="cp-badge">{badge > 9 ? "9+" : badge}</span>}
-          </Link>
+            {unread > 0 && <span className="cp-badge">{unread > 9 ? "9+" : unread}</span>}
+          </button>
           <button className="cp-iconbtn" aria-label="Toggle theme" onClick={toggle}><Icon name="moon" /></button>
           <a className="cp-pill cp-hide-sm" href="https://explore.mainnet.tempo.xyz" target="_blank" rel="noreferrer">
             <img src="/tempo-icon.svg" alt="" width={20} height={20} style={{ borderRadius: 6 }} />{t("tempoNet")}<Icon name="chevR" size={16} />
           </a>
+
+          {nOpen && (
+            <>
+              <div className="cp-clickaway" onClick={() => setNOpen(false)} />
+              <div className="cp-notif">
+                <div className="cp-nh">
+                  <b>{t("notifTitle")}</b>
+                  {unread > 0 && <button className="cp-link" onClick={markAll}>{t("markRead")}</button>}
+                </div>
+                {items.length === 0 && <p className="cp-muted" style={{ padding: 16, margin: 0 }}>{t("noNotif")}</p>}
+                {items.map((n) => (
+                  <Link key={n.id} href="/activity" className={`cp-n${n.unread ? " unread" : ""}`} onClick={() => setNOpen(false)}>
+                    <span className={`cp-ic sm ${TONE[n.kind]}`}><Icon name={ICON[n.kind]} size={16} /></span>
+                    <span className="tx">{t(TXT[n.kind], { who: n.who, amt: usd(n.amount) })}</span>
+                    <span className="tm">{ago(n.ts, t)}</span>
+                    {n.unread && <span className="dot" />}
+                  </Link>
+                ))}
+                <Link className="cp-nf" href="/activity" onClick={() => setNOpen(false)}>{t("viewAll")}</Link>
+              </div>
+            </>
+          )}
         </header>
         <div className="cp-content">{children}</div>
       </div>

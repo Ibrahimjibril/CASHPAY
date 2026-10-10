@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { sql } from "@/lib/db";
 
 export async function generateMetadata({ params }: { params: Promise<{ hash: string }> }): Promise<Metadata> {
-  const base = new URL(process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://cashpay-tau.vercel.app");
+  const base = new URL(process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://www.cashpayt.xyz");
   const { hash } = await params;
   let title = "Tips on CashPay";
   let description = "Claim your tip in seconds. Money for the social internet.";

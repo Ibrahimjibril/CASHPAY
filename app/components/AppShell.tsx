@@ -6,6 +6,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Icon from "./Icons";
 import { Wave } from "./Charts";
 import { useI18n } from "@/lib/i18n";
+import AboutModal from "./AboutModal";
 import { ago, usd } from "@/lib/ui";
 
 const NAV = [
@@ -30,6 +31,7 @@ export default function AppShell({ children }: { children: ReactNode; badge?: nu
   tokRef.current = getAccessToken;
 
   const [open, setOpen] = useState(false);
+  const [about, setAbout] = useState(false);
   const [light, setLight] = useState(false);
   const [q, setQ] = useState("");
   const [focus, setFocus] = useState(false);
@@ -91,6 +93,7 @@ export default function AppShell({ children }: { children: ReactNode; badge?: nu
   return (
     <div className={`cp-root${light ? " cp-light" : ""}`}>
       {open && <div className="cp-overlay" onClick={() => setOpen(false)} />}
+      <AboutModal open={about} onClose={() => setAbout(false)} />
       <aside className={`cp-side${open ? " open" : ""}`}>
         <Link className="cp-logo" href="/dashboard" onClick={() => setOpen(false)}><img src="/logo.svg" alt="" />CashPay</Link>
         <nav className="cp-nav" aria-label="Main">
@@ -105,7 +108,7 @@ export default function AppShell({ children }: { children: ReactNode; badge?: nu
           <b className="t1">{t("promo1")}</b>
           <b className="t2">{t("promo2")} ◆</b>
           <p>{t("promoText")}</p>
-          <Link className="cp-btn primary" href="/tips">{t("learnMore")} <Icon name="arrowR" size={16} /></Link>
+          <button className="cp-btn primary" onClick={() => { setAbout(true); setOpen(false); }}>{t("learnMore")} <Icon name="arrowR" size={16} /></button>
           <Wave />
         </div>
       </aside>

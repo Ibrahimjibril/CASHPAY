@@ -344,3 +344,22 @@ a.cp-stat{display:block}
 .cp-n .tm{color:var(--muted);font-size:12px;white-space:nowrap}
 .cp-n .dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex:none}
 .cp-nf{display:block;text-align:center;padding:12px;color:var(--teal);font-weight:700;font-size:14px}
+
+/* About CashPay modal */
+.cp-modal.wide{max-width:560px;text-align:left}
+.cp-about h4{margin:18px 0 6px;font-size:13px;color:var(--teal);letter-spacing:.06em;text-transform:uppercase}
+.cp-about p,.cp-about li{font-size:14.5px;line-height:1.6;color:var(--text);margin:0}
+.cp-about ul{margin:6px 0 0;padding-left:18px;display:grid;gap:5px}
+.ab-head{display:flex;align-items:center;gap:12px}
+.ab-title{flex:1;min-width:0}
+.ab-title b{display:block;font-size:20px}
+.ab-title span{color:var(--muted);font-size:13px}
+.cp-about .ab-lead{margin:14px 0 0;font-size:20px;font-weight:800;line-height:1.3;color:var(--text)}
+.ab-steps{display:grid;gap:10px;margin-top:6px}
+.ab-step{display:flex;gap:12px;align-items:flex-start}
+.ab-num{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-size:14px}
+.ab-num.g{background:#19c58f}.ab-num.b{background:#3b82f6}.ab-num.o{background:#f59e0b}
+.ab-tokens{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ab-token{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-weight:700;font-size:13px;background:var(--panel2)}
+.cp-about .ab-note{margin-top:16px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);font-size:13px}
+.ab-cta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}

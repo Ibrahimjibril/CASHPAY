@@ -17,7 +17,7 @@ export default function Home() {
           <div className="nav-links">
             <a href="#pay">Pay anyone</a><a href="#tips">Tips</a><a href="#tempo">Tempo</a><a href="#how">How it works</a>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><a className="xbtn" href="https://x.com/CashPaya" target="_blank" rel="noreferrer" aria-label="CashPay on X"><XIcon /></a><a className="btn primary" href="/login">Start Sending</a></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><a className="xbtn" href="https://x.com/CashPay_" target="_blank" rel="noreferrer" aria-label="CashPay on X"><XIcon /></a><a className="btn primary" href="/login">Start Sending</a></div>
         </nav>
 
         <div className="hero">
@@ -96,7 +96,7 @@ export default function Home() {
           <h2>Your money. Your people.<br />One simple payment layer.</h2>
           <a className="btn" href="/login">Start Sending</a>
         </div>
-        <footer><span>© CashPay</span><a className="xbtn" href="https://x.com/CashPaya" target="_blank" rel="noreferrer" aria-label="CashPay on X"><XIcon /></a><span>Built on Tempo</span></footer>
+        <footer><span>© CashPay</span><a className="xbtn" href="https://x.com/CashPay_" target="_blank" rel="noreferrer" aria-label="CashPay on X"><XIcon /></a><span>Built on Tempo</span></footer>
       </div>
     </main>
   );

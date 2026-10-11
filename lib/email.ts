@@ -22,7 +22,7 @@ function buildHtml(p: P) {
     ? `<tr><td align="center" style="padding:4px 32px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8ba2b6">Button not working? Copy this link:<br><a href="${esc(p.link)}" style="color:#19e3a5;word-break:break-all">${esc(p.link)}</a></td></tr>`
     : "";
   const xbtn = p.xIconUrl
-    ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 14px"><tr><td><a href="https://x.com/CashPaya" target="_blank" style="text-decoration:none"><img src="${esc(p.xIconUrl)}" width="44" height="44" alt="X" style="display:block;border:0"></a></td></tr></table>`
+    ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 14px"><tr><td><a href="https://x.com/CashPay_" target="_blank" style="text-decoration:none"><img src="${esc(p.xIconUrl)}" width="44" height="44" alt="X" style="display:block;border:0"></a></td></tr></table>`
     : "";
 
   return `<!doctype html>

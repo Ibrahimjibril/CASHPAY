@@ -363,3 +363,5 @@ a.cp-stat{display:block}
 .ab-token{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-weight:700;font-size:13px;background:var(--panel2)}
 .cp-about .ab-note{margin-top:16px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);font-size:13px}
 .ab-cta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.cp-modal.wide{text-align:start}
+.cp-about ul{padding-left:0;padding-inline-start:18px}

@@ -6,14 +6,31 @@ const esc = (s: string) =>
 export type EmailKind = "claim" | "received";
 type P = { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string; xIconUrl?: string };
 
-function buildHtml(p: P) {
+// Downloads an image so it can be embedded inside the email itself (Gmail never hides embedded images).
+async function grab(url?: string): Promise<Buffer | null> {
+  if (!url) return null;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    clearTimeout(timer);
+    if (!res.ok || !String(res.headers.get("content-type") || "").startsWith("image/")) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+function buildHtml(p: P, bannerSrc?: string, xSrc?: string) {
   const claim = p.kind === "claim";
   const button = claim ? `Claim your $${p.amount}` : "Open CashPay";
   const note = claim
     ? "Sign in with this email address to see your money. No crypto experience needed."
     : "The money is already in your CashPay wallet.";
-  const banner = p.bannerUrl
-    ? `<tr><td style="padding:0;font-size:0;line-height:0"><img src="${esc(p.bannerUrl)}" width="600" alt="${esc(`${p.from} sent you $${p.amount} on CashPay`)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none"></td></tr>`
+  const bSrc = bannerSrc ?? p.bannerUrl;
+  const xs = xSrc ?? p.xIconUrl;
+  const banner = bSrc
+    ? `<tr><td style="padding:0;font-size:0;line-height:0"><img src="${esc(bSrc)}" width="600" alt="${esc(`${p.from} sent you $${p.amount} on CashPay`)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none"></td></tr>`
     : "";
   const memo = p.memo
     ? `<p style="margin:16px 0 0;padding:12px 16px;border-left:3px solid #19e3a5;background:#0e2a44;border-radius:8px;color:#eaf2f8;font-size:15px;line-height:1.5">“${esc(p.memo)}”</p>`
@@ -21,8 +38,8 @@ function buildHtml(p: P) {
   const copy = claim
     ? `<tr><td align="center" style="padding:4px 32px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8ba2b6">Button not working? Copy this link:<br><a href="${esc(p.link)}" style="color:#19e3a5;word-break:break-all">${esc(p.link)}</a></td></tr>`
     : "";
-  const xbtn = p.xIconUrl
-    ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 14px"><tr><td><a href="https://x.com/CashPay_" target="_blank" style="text-decoration:none"><img src="${esc(p.xIconUrl)}" width="44" height="44" alt="X" style="display:block;border:0"></a></td></tr></table>`
+  const xbtn = xs
+    ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 14px"><tr><td><a href="https://x.com/CashPay_" target="_blank" style="text-decoration:none"><img src="${esc(xs)}" width="44" height="44" alt="X" style="display:block;border:0"></a></td></tr></table>`
     : "";
 
   return `<!doctype html>
@@ -79,26 +96,30 @@ export async function sendEmailDetailed(to: string, p: P): Promise<{ ok: boolean
   const subject = `${p.from} sent you a payment on CashPay`;
   const button = claim ? `Claim your $${p.amount}` : "Open CashPay";
   const note = claim ? "Sign in with this email address to see your money." : "The money is already in your CashPay wallet.";
-  const html = buildHtml(p);
   const text = `${p.from} sent you $${p.amount} through CashPay.${p.memo ? `\n"${p.memo}"` : ""}\n\n${button}: ${p.link}\n\n${note}\n\nYou are receiving this email because ${p.from} sent you a payment on CashPay.`;
 
   // 1) Own domain through Resend (best deliverability) when both variables are set
   const rKey = process.env.RESEND_API_KEY;
   const rFrom = process.env.EMAIL_FROM;
-  if (rKey && rFrom) return viaResend(rKey, rFrom, to, subject, html, text);
+  if (rKey && rFrom) return viaResend(rKey, rFrom, to, subject, buildHtml(p), text);
 
-  // 2) Gmail SMTP fallback
+  // 2) Gmail SMTP: images are embedded in the email so Gmail shows them without asking
   const gUser = process.env.GMAIL_USER;
   const gPass = process.env.GMAIL_APP_PASSWORD;
   if (gUser && gPass) {
     try {
+      const [bannerBuf, xBuf] = await Promise.all([grab(p.bannerUrl), grab(p.xIconUrl)]);
+      const html = buildHtml(p, bannerBuf ? "cid:cashpay-banner" : undefined, xBuf ? "cid:cashpay-x" : undefined);
+      const attachments: any[] = [];
+      if (bannerBuf) attachments.push({ filename: "cashpay-banner.png", content: bannerBuf, cid: "cashpay-banner", contentType: "image/png" });
+      if (xBuf) attachments.push({ filename: "x.png", content: xBuf, cid: "cashpay-x", contentType: "image/png" });
       const t = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
         secure: true,
         auth: { user: gUser, pass: gPass.replace(/\s/g, "") },
       });
-      await t.sendMail({ from: `CashPay <${gUser}>`, replyTo: gUser, to, subject, html, text });
+      await t.sendMail({ from: `CashPay <${gUser}>`, replyTo: gUser, to, subject, html, text, attachments });
       return { ok: true };
     } catch (e: any) {
       console.error("gmail send failed", e);
@@ -107,6 +128,6 @@ export async function sendEmailDetailed(to: string, p: P): Promise<{ ok: boolean
   }
 
   // 3) Resend sandbox sender (only delivers to your own address)
-  if (rKey) return viaResend(rKey, "CashPay <onboarding@resend.dev>", to, subject, html, text);
+  if (rKey) return viaResend(rKey, "CashPay <onboarding@resend.dev>", to, subject, buildHtml(p), text);
   return { ok: false, error: "Email isn't set up yet: GMAIL_USER / GMAIL_APP_PASSWORD are missing in Vercel." };
 }

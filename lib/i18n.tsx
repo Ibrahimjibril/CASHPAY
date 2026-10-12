@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { EXTRA } from "./i18n-extra";
+import { ABOUT } from "./i18n-about";
 
 export type Lang = "en" | "zh" | "fr" | "ar" | "hi" | "ha";
 export const LANGS: { code: Lang; name: string }[] = [
@@ -177,12 +178,12 @@ const ha: Dict = {
 };
 
 const D: Record<Lang, Dict> = {
-  en: { ...en, ...EXTRA.en },
-  zh: { ...zh, ...EXTRA.zh },
-  fr: { ...fr, ...EXTRA.fr },
-  ar: { ...ar, ...EXTRA.ar },
-  hi: { ...hi, ...EXTRA.hi },
-  ha: { ...ha, ...EXTRA.ha },
+  en: { ...en, ...EXTRA.en, ...ABOUT.en },
+  zh: { ...zh, ...EXTRA.zh, ...ABOUT.zh },
+  fr: { ...fr, ...EXTRA.fr, ...ABOUT.fr },
+  ar: { ...ar, ...EXTRA.ar, ...ABOUT.ar },
+  hi: { ...hi, ...EXTRA.hi, ...ABOUT.hi },
+  ha: { ...ha, ...EXTRA.ha, ...ABOUT.ha },
 };
 
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: string, v?: Record<string, string | number>) => string };

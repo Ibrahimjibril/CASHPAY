@@ -3,62 +3,60 @@ import Link from "next/link";
 import Icon from "./Icons";
 import TokenIcon from "./TokenIcon";
 import { TOKENS } from "@/lib/tokens";
+import { useI18n } from "@/lib/i18n";
 
 export default function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useI18n();
   if (!open) return null;
   return (
     <div className="cp-modal-bg" onClick={onClose} role="dialog" aria-modal="true" aria-label="About CashPay">
       <div className="cp-modal wide cp-about" onClick={(e) => e.stopPropagation()}>
         <div className="ab-head">
           <img src="/logo.svg" alt="" width={44} height={44} style={{ borderRadius: 12 }} />
-          <div className="ab-title"><b>CashPay</b><span>Money for the social internet</span></div>
+          <div className="ab-title"><b>CashPay</b><span>{t("abTag")}</span></div>
           <button className="cp-iconbtn" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
         </div>
 
-        <p className="ab-lead">Send money. Just like sending a message.</p>
+        <p className="ab-lead">{t("abLead")}</p>
 
-        <h4>What is CashPay?</h4>
-        <p>
-          CashPay lets you send stablecoins to anyone using a <b>@username</b>, an <b>email</b>, an <b>X handle</b> or a{" "}
-          <b>wallet address</b>. The person you pay doesn&apos;t need a wallet or any crypto knowledge: they get a claim link,
-          sign in, and the money is theirs.
-        </p>
+        <h4>{t("abWhatH")}</h4>
+        <p>{t("abWhat")}</p>
 
-        <h4>The problem we solve</h4>
+        <h4>{t("abProbH")}</h4>
         <ul>
-          <li>Sending money online still means asking for bank details or long wallet addresses.</li>
-          <li>If the other person has no crypto wallet, you can&apos;t pay them.</li>
-          <li>Most blockchains need a separate gas token just to move a dollar.</li>
-          <li>Paying many people means repeating the same transfer again and again.</li>
+          <li>{t("abP1")}</li>
+          <li>{t("abP2")}</li>
+          <li>{t("abP3")}</li>
+          <li>{t("abP4")}</li>
         </ul>
 
-        <h4>How it works</h4>
+        <h4>{t("abHowH")}</h4>
         <div className="ab-steps">
-          <div className="ab-step"><span className="ab-num g">1</span><p><b>Send.</b> Pick who to pay, the amount and the stablecoin.</p></div>
-          <div className="ab-step"><span className="ab-num b">2</span><p><b>They get notified.</b> An email or an X post with a secure claim link.</p></div>
-          <div className="ab-step"><span className="ab-num o">3</span><p><b>They claim.</b> They sign in with email or X and a wallet is created for them automatically.</p></div>
+          <div className="ab-step"><span className="ab-num g">1</span><p><b>{t("abS1T")}</b> {t("abS1")}</p></div>
+          <div className="ab-step"><span className="ab-num b">2</span><p><b>{t("abS2T")}</b> {t("abS2")}</p></div>
+          <div className="ab-step"><span className="ab-num o">3</span><p><b>{t("abS3T")}</b> {t("abS3")}</p></div>
         </div>
 
-        <h4>Why Tempo</h4>
-        <p>Tempo is a blockchain built for payments, which is exactly what makes CashPay possible:</p>
+        <h4>{t("abWhyH")}</h4>
+        <p>{t("abWhyI")}</p>
         <ul>
-          <li><b>Fees in stablecoins:</b> no gas token to buy.</li>
-          <li><b>Batch payments:</b> Bulk Send pays up to 20 people in one transaction with one fee.</li>
-          <li><b>Fast finality:</b> payments confirm in about a second.</li>
-          <li><b>Stablecoin native (TIP-20):</b> one standard for dollar tokens.</li>
+          <li><b>{t("abW1T")}</b> {t("abW1")}</li>
+          <li><b>{t("abW2T")}</b> {t("abW2")}</li>
+          <li><b>{t("abW3T")}</b> {t("abW3")}</li>
+          <li><b>{t("abW4T")}</b> {t("abW4")}</li>
         </ul>
         <div className="ab-tokens">
-          {TOKENS.map((t) => (
-            <span key={t.symbol} className="ab-token"><TokenIcon symbol={t.symbol} size={20} />{t.symbol}</span>
+          {TOKENS.map((k) => (
+            <span key={k.symbol} className="ab-token"><TokenIcon symbol={k.symbol} size={20} />{k.symbol}</span>
           ))}
         </div>
 
-        <p className="ab-note">CashPay is in alpha on Tempo mainnet. Please use small amounts while testing.</p>
+        <p className="ab-note">{t("abNote")}</p>
 
         <div className="ab-cta">
-          <Link className="cp-btn primary" href="/send" onClick={onClose}>Send money</Link>
-          <Link className="cp-btn" href="/tips" onClick={onClose}>Tip someone</Link>
-          <a className="cp-btn ghost" href="https://x.com/CashPay_" target="_blank" rel="noreferrer">Follow @CashPay_ on X</a>
+          <Link className="cp-btn primary" href="/send" onClick={onClose}>{t("qSend")}</Link>
+          <Link className="cp-btn" href="/tips" onClick={onClose}>{t("qTip")}</Link>
+          <a className="cp-btn ghost" href="https://x.com/CashPay_" target="_blank" rel="noreferrer">{t("abFollow")}</a>
         </div>
       </div>
     </div>

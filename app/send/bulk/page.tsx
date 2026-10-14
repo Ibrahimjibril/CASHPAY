@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
-import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
+import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
 import { toSite } from "@/lib/site";
 import TokenPicker from "@/app/components/TokenPicker";
@@ -255,7 +255,12 @@ export default function BulkSend() {
               <textarea className="bulk" value={text} onChange={(e) => setText(e.target.value)} rows={7} autoCapitalize="none"
                 placeholder={"@john 5\nsarah@gmail.com 10\n0x1234…abcd 20\n@eeeman33 2"} />
             </label>
-            <label>Same amount for everyone (optional)<input inputMode="decimal" value={common} onChange={(e) => setCommon(e.target.value)} placeholder="5.00" /></label>
+            <label>Same amount for everyone (optional)
+              <div className="amtrow">
+                <input inputMode="decimal" value={common} onChange={(e) => setCommon(e.target.value)} placeholder="5.00" />
+                <button type="button" className="maxbtn" onClick={() => setCommon(maxSendable(bals[tok] || "0", text.split("\n").map((l) => l.trim()).filter(Boolean).length))}>Max</button>
+              </div>
+            </label>
             <label>Message (optional)<input value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={140} placeholder="Thanks, team!" /></label>
             {msg && <p className="small" style={{ whiteSpace: "pre-line" }}>{msg}</p>}
             <button className="btn primary" onClick={prepare}>Continue</button>

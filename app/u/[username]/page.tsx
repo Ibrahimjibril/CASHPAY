@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Avatar from "@/app/components/Avatar";
 import { sql } from "@/lib/db";
 import { normalize, validUsername } from "@/lib/username";
 
@@ -14,7 +15,7 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
   return (
     <main className="wrap center">
       <a className="brand" href="/"><img src="/logo.svg" alt="" />CashPay</a>
-      <div className="avatar big">{String(p.display_name).charAt(0).toUpperCase()}</div>
+      <div style={{ marginTop: 20 }}><Avatar username={p.username} name={p.display_name} size={96} /></div>
       <h1 className="h-sm">{p.display_name}</h1>
       <p className="small">@{p.username}</p>
       {p.bio && <p className="lead">{p.bio}</p>}

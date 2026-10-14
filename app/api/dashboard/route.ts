@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
 import { TEMPO, getTokenBalance, formatUnits } from "@/lib/tempo";
 import { TOKENS } from "@/lib/tokens";
+import { incomingTransfers } from "@/lib/chain";
 
 const DAY = 86400000;
 const num = (v: any) => Number(v ?? 0) || 0;
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
     Promise.all(TOKENS.map((t) => (wallet ? getTokenBalance(t.address, wallet).catch(() => BigInt(0)) : Promise.resolve(BigInt(0))))),
     sql`
       select p.id, p.amount, p.memo, p.status, p.created_at, p.sender_id, p.recipient_address, p.recipient_email, p.recipient_x,
-             p.claim_status, p.claim_amount, p.claimed_at, p.claimed_by,
+             p.claim_status, p.claim_amount, p.claimed_at, p.claimed_by, p.tx_hash, p.claim_tx,
              su.username as sender_username, ru.username as recipient_username
       from payments p
       join users su on su.id = p.sender_id
@@ -51,6 +52,12 @@ export async function GET(req: Request) {
     if (r.claimed_by === userId && r.claim_status === "CLAIMED") {
       evs.push({ id: r.id, kind: "claimed", tip, amount: num(r.claim_amount), ts: ts(r.claimed_at), status: "CONFIRMED", who: `@${r.sender_username}` });
     }
+  }
+  const known = new Set<string>();
+  for (const r of rows) { if (r.tx_hash) known.add(String(r.tx_hash).toLowerCase()); if (r.claim_tx) known.add(String(r.claim_tx).toLowerCase()); }
+  for (const x of await incomingTransfers(wallet)) {
+    if (known.has(x.hash)) continue;
+    evs.push({ id: `x-${x.hash}-${x.logIndex}`, kind: "received", tip: false, amount: x.amount, ts: x.ts, status: "CONFIRMED", who: short(x.sender) });
   }
   evs.sort((a, b) => b.ts - a.ts);
   const conf = evs.filter((e) => e.status === "CONFIRMED");

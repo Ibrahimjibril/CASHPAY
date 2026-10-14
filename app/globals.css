@@ -365,3 +365,17 @@ a.cp-stat{display:block}
 .ab-cta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .cp-modal.wide{text-align:start}
 .cp-about ul{padding-left:0;padding-inline-start:18px}
+
+/* Max button, avatars, wallet page, bottom navigation */
+.amtrow{display:flex;gap:8px}
+.amtrow input{flex:1;min-width:0}
+.maxbtn{min-height:48px;padding:0 18px;border-radius:12px;border:1.5px solid var(--brand);background:var(--soft);color:var(--brand);font:inherit;font-weight:800;cursor:pointer}
+.cp-av{border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#19c58f,#0f9a73);color:#fff;font-weight:800;flex:none;object-fit:cover}
+.wl-addr{word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.cp-bottom{display:none}
+@media(max-width:1000px){
+  .cp-bottom{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--side);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+  .cp-bottom a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:12px;font-size:12px;font-weight:600;color:var(--muted)}
+  .cp-bottom a.active{color:var(--teal);background:rgba(25,227,165,.1)}
+  .cp-content{padding-bottom:96px}
+}

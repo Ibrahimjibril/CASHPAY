@@ -5,7 +5,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import Loader from "@/app/components/Loader";
 import TokenPicker from "@/app/components/TokenPicker";
-import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress } from "@/lib/money";
+import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
 import { toSite } from "@/lib/site";
 
@@ -279,7 +279,12 @@ export default function Send() {
                 {isEmail && <button className="btn" disabled={busy} onClick={useEmail}>{busy ? "Preparing…" : `Send to ${q}`}</button>}
               </>
             )}
-            <label>Amount ($)<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="20.00" /></label>
+            <label>Amount ($)
+              <div className="amtrow">
+                <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="20.00" />
+                <button type="button" className="maxbtn" onClick={() => setAmount(maxSendable(bals[tok] || "0"))}>Max</button>
+              </div>
+            </label>
             <div className="chips" style={{ marginTop: 0 }}>
               {QUICK.map((v) => <button key={v} className="chip" onClick={() => setAmount(v)}>${v}</button>)}
             </div>

@@ -5,6 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import AppShell from "../components/AppShell";
 import Icon from "../components/Icons";
 import Loader from "../components/Loader";
+import Avatar from "../components/Avatar";
 import { LANGS, useI18n } from "@/lib/i18n";
 
 export default function Settings() {
@@ -54,7 +55,7 @@ export default function Settings() {
         <div className="cp-panel">
           <div className="cp-ph"><h2>{t("sProfile")}</h2></div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span className="cp-ic green" style={{ width: 64, height: 64, borderRadius: "50%", fontSize: 26, fontWeight: 800 }}>{String(p.display_name).charAt(0).toUpperCase()}</span>
+            <Avatar username={p.username} name={p.display_name} size={64} />
             <div>
               <b style={{ fontSize: 18 }}>{p.display_name}</b>
               <div className="cp-muted">@{p.username}</div>

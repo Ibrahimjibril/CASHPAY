@@ -13,8 +13,10 @@ const NAV = [
   { href: "/dashboard", key: "nav_overview", icon: "home" },
   { href: "/send", key: "nav_send", icon: "send" },
   { href: "/send/bulk", key: "nav_bulk", icon: "users" },
+  { href: "/wallet", key: "nav_wallet", icon: "wallet" },
   { href: "/tips", key: "nav_tips", icon: "heart" },
   { href: "/activity", key: "nav_tx", icon: "repeat" },
+  { href: "/profile", key: "nav_profile", icon: "user" },
   { href: "/settings", key: "nav_settings", icon: "settings" },
 ];
 
@@ -159,6 +161,11 @@ export default function AppShell({ children }: { children: ReactNode; badge?: nu
           )}
         </header>
         <div className="cp-content">{children}</div>
+        <nav className="cp-bottom" aria-label="Primary">
+          <Link href="/dashboard" className={path === "/dashboard" ? "active" : ""}><Icon name="home" size={22} />{t("nav_home")}</Link>
+          <Link href="/wallet" className={path === "/wallet" ? "active" : ""}><Icon name="wallet" size={22} />{t("nav_wallet")}</Link>
+          <Link href="/profile" className={path === "/profile" ? "active" : ""}><Icon name="user" size={22} />{t("nav_profile")}</Link>
+        </nav>
       </div>
     </div>
   );

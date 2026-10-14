@@ -3,6 +3,7 @@ import Loader from "@/app/components/Loader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { maxSendable, parseUnits6 } from "@/lib/money";
 
 type Person = { username: string; display_name: string; wallet_address: string };
 type Picked = { username?: string; display_name?: string; x?: string };
@@ -17,6 +18,17 @@ export default function Tips() {
   const [picked, setPicked] = useState<Picked | null>(null);
   const [amount, setAmount] = useState("5");
   const [searched, setSearched] = useState(false);
+  const [maxBal, setMaxBal] = useState("0");
+  useEffect(() => {
+    if (!ready || !authenticated) return;
+    api("/api/balance").then((r) => r.json()).then((d) => {
+      let best = BigInt(0);
+      let bs = "0";
+      for (const x of d.tokens || []) { const u = parseUnits6(x.balance) ?? BigInt(0); if (u > best) { best = u; bs = x.balance; } }
+      setMaxBal(bs);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authenticated]);
 
   async function api(path: string) {
     const token = await getAccessToken();
@@ -77,7 +89,12 @@ export default function Tips() {
             )}
           </>
         )}
-        <label>Amount ($)<input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
+        <label>Amount ($)
+          <div className="amtrow">
+            <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <button type="button" className="maxbtn" onClick={() => setAmount(maxSendable(maxBal))}>Max</button>
+          </div>
+        </label>
         <div className="chips" style={{ marginTop: 0 }}>
           {PRESETS.map((v) => <button key={v} className="chip" onClick={() => setAmount(v)}>${v}</button>)}
         </div>

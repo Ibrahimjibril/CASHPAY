@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { EXTRA } from "./i18n-extra";
 import { ABOUT } from "./i18n-about";
+import { NAVX } from "./i18n-nav";
 
 export type Lang = "en" | "zh" | "fr" | "ar" | "hi" | "ha";
 export const LANGS: { code: Lang; name: string }[] = [
@@ -178,12 +179,12 @@ const ha: Dict = {
 };
 
 const D: Record<Lang, Dict> = {
-  en: { ...en, ...EXTRA.en, ...ABOUT.en },
-  zh: { ...zh, ...EXTRA.zh, ...ABOUT.zh },
-  fr: { ...fr, ...EXTRA.fr, ...ABOUT.fr },
-  ar: { ...ar, ...EXTRA.ar, ...ABOUT.ar },
-  hi: { ...hi, ...EXTRA.hi, ...ABOUT.hi },
-  ha: { ...ha, ...EXTRA.ha, ...ABOUT.ha },
+  en: { ...en, ...EXTRA.en, ...ABOUT.en, ...NAVX.en },
+  zh: { ...zh, ...EXTRA.zh, ...ABOUT.zh, ...NAVX.zh },
+  fr: { ...fr, ...EXTRA.fr, ...ABOUT.fr, ...NAVX.fr },
+  ar: { ...ar, ...EXTRA.ar, ...ABOUT.ar, ...NAVX.ar },
+  hi: { ...hi, ...EXTRA.hi, ...ABOUT.hi, ...NAVX.hi },
+  ha: { ...ha, ...EXTRA.ha, ...ABOUT.ha, ...NAVX.ha },
 };
 
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: string, v?: Record<string, string | number>) => string };

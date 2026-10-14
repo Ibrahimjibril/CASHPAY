@@ -28,7 +28,7 @@ const ICON: Record<string, string> = { tipRecv: "send", payRecv: "download", tip
 export default function AppShell({ children }: { children: ReactNode; badge?: number }) {
   const { t } = useI18n();
   const path = usePathname();
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken, user } = usePrivy();
   const tokRef = useRef(getAccessToken);
   tokRef.current = getAccessToken;
 
@@ -68,6 +68,19 @@ export default function AppShell({ children }: { children: ReactNode; badge?: nu
     const id = setInterval(loadNotifs, 60000);
     return () => clearInterval(id);
   }, [loadNotifs]);
+
+  useEffect(() => {
+    const tw = (user as any)?.twitter;
+    if (!tw) return;
+    try { if (sessionStorage.getItem("cp-xsync") === String(tw.subject || "1")) return; } catch {}
+    (async () => {
+      try {
+        const token = await tokRef.current();
+        const r = await fetch("/api/profile/sync-x", { method: "POST", headers: { authorization: "Bearer " + token } });
+        if (r.ok) { try { sessionStorage.setItem("cp-xsync", String(tw.subject || "1")); } catch {} }
+      } catch {}
+    })();
+  }, [user]);
 
   async function markAll() {
     setItems((v) => v.map((n) => ({ ...n, unread: false })));

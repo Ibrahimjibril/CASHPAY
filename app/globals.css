@@ -379,3 +379,15 @@ a.cp-stat{display:block}
   .cp-bottom a.active{color:var(--teal);background:rgba(25,227,165,.1)}
   .cp-content{padding-bottom:96px}
 }
+
+/* X account search + selection */
+.xavatar{border-radius:50%;object-fit:cover;flex:none;background:var(--soft)}
+.xr{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.xr:disabled{opacity:.6;cursor:default}
+.xr b{display:block}
+.xr small{color:var(--muted);font-size:13px}
+.xr .tag{margin-left:auto;font-size:11px;font-weight:700;color:var(--brand);background:var(--soft);padding:4px 9px;border-radius:999px;white-space:nowrap}
+.xsel{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.xsel input{width:96px;min-height:40px;padding:0 10px}
+.xdel{background:transparent;border:0;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+.xconfirm{display:flex;align-items:center;gap:12px}

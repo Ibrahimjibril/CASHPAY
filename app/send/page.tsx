@@ -10,7 +10,7 @@ import { tokenBySymbol } from "@/lib/tokens";
 import { toSite } from "@/lib/site";
 
 type Person = { username: string; display_name: string; wallet_address: string };
-type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string };
+type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string; avatar?: string; name?: string };
 type Done = { hash: string; id?: string; status: string; explorerUrl: string; emailed: boolean };
 
 const QUICK = ["5", "10", "20", "50", "100"];
@@ -44,6 +44,27 @@ export default function Send() {
     return fetch(path, { ...init, headers: { "content-type": "application/json", authorization: `Bearer ${token}` } });
   }
 
+  function applyX(d: any) {
+    const xu = d.x || {};
+    if (d.kind === "user") {
+      setTo({ label: `@${d.username}`, sub: `X @${xu.username || d.handle} · on CashPay`, address: d.address, avatar: xu.avatar, name: xu.name });
+    } else {
+      setTo({ label: `@${d.handle}`, sub: `${xu.name ? xu.name + " · " : ""}Not on CashPay yet · they'll claim with X`, address: d.address, x: d.handle, escrowId: d.escrowId, avatar: xu.avatar, name: xu.name });
+    }
+  }
+
+  async function resolveXId(xId: string) {
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await api("/api/recipients/resolve-x", { method: "POST", body: JSON.stringify({ xId }) });
+      const d = await r.json();
+      if (!r.ok) setMsg(d.error || "We couldn't prepare this tip.");
+      else applyX(d);
+    } catch { setMsg("We couldn't prepare this tip. Please try again."); }
+    setBusy(false);
+  }
+
   async function resolveX(handle: string) {
     setBusy(true);
     setMsg("");
@@ -51,7 +72,7 @@ export default function Send() {
       const r = await api("/api/recipients/resolve-x", { method: "POST", body: JSON.stringify({ handle }) });
       const d = await r.json();
       if (!r.ok) setMsg(d.error || "We couldn't prepare this tip.");
-      else setTo({ label: `@${d.handle}`, sub: "Not on CashPay yet · they'll claim with X", address: d.address, x: d.handle, escrowId: d.escrowId });
+      else applyX(d);
     } catch { setMsg("We couldn't prepare this tip. Please try again."); }
     setBusy(false);
   }
@@ -83,6 +104,7 @@ export default function Send() {
     const sp = new URLSearchParams(window.location.search);
     const u = (sp.get("u") || "").replace(/^@/, "").toLowerCase();
     const x = (sp.get("x") || "").replace(/^@/, "").toLowerCase();
+    const xid = sp.get("xid") || "";
     if (sp.get("amount")) setAmount(sp.get("amount") as string);
     if (sp.get("memo")) setMemo(sp.get("memo") as string);
     if (u) {
@@ -92,6 +114,8 @@ export default function Send() {
           const p = (d.users || []).find((z: Person) => z.username === u);
           if (p) setTo({ label: "@" + p.username, sub: p.display_name, address: p.wallet_address });
         });
+    } else if (xid) {
+      resolveXId(xid);
     } else if (x) {
       resolveX(x);
     }
@@ -259,7 +283,7 @@ export default function Send() {
             <TokenPicker value={tok} onChange={setTok} balances={bals} />
             {to ? (
               <div className="card">
-                <b>{to.label}</b> {to.sub && <span className="small">· {to.sub}</span>}
+                {to.avatar && <img src={to.avatar} alt="" width={40} height={40} style={{ borderRadius: "50%", verticalAlign: "middle", marginRight: 10 }} referrerPolicy="no-referrer" />}<b>{to.label}</b> {to.sub && <span className="small">· {to.sub}</span>}
                 <div><button className="btn" onClick={() => setTo(null)}>Change</button></div>
               </div>
             ) : (

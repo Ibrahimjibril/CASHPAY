@@ -18,24 +18,30 @@ export async function POST(req: Request) {
   if (!userId) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 400 });
+
+  // The X account is the one Privy verified through OAuth (never taken from the browser)
+  const pu: any = await getPrivy().getUser(userId);
+  const xName = String(pu?.twitter?.username || "").toLowerCase();
+  const xSub = String(pu?.twitter?.subject || "");
+  if (!xName && !xSub) return NextResponse.json({ error: "Please sign in with your X account to claim." }, { status: 403 });
+
   let rid = parsed.data.id;
   if (!rid && parsed.data.batch) {
-    const pu0: any = await getPrivy().getUser(userId);
-    const x0 = String(pu0?.twitter?.username || "").toLowerCase();
-    if (!x0) return NextResponse.json({ error: "Please sign in with your X account to claim." }, { status: 403 });
     const found = await sql`
-      select id from payments
-      where tx_hash = ${parsed.data.batch.toLowerCase()} and recipient_x = ${x0}
-      order by (claim_status is null) desc, leg
+      select p.id from payments p join escrows e on e.id = p.escrow_id
+      where p.tx_hash = ${parsed.data.batch.toLowerCase()}
+        and ((e.x_id is not null and e.x_id = ${xSub}) or (e.x_id is null and p.recipient_x = ${xName}))
+      order by (p.claim_status is null) desc, p.leg
       limit 1`;
-    if (!found[0]) return NextResponse.json({ error: `There's no tip for @${x0} in this batch.` }, { status: 404 });
+    if (!found[0]) return NextResponse.json({ error: `There's no tip for @${xName} in this batch.` }, { status: 404 });
     rid = found[0].id;
   }
   if (!rid) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 400 });
   const id: string = rid;
 
   const rows = await sql`
-    select p.amount, p.token, p.status, p.recipient_x, p.claim_status, p.claim_tx, p.claim_amount, e.wallet_id, e.address as escrow_address
+    select p.amount, p.token, p.status, p.recipient_x, p.claim_status, p.claim_tx, p.claim_amount,
+           e.wallet_id, e.address as escrow_address, e.x_id
     from payments p join escrows e on e.id = p.escrow_id
     where p.id = ${id}`;
   const p = rows[0];
@@ -45,9 +51,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "This payment is still being confirmed. Try again in a moment." }, { status: 409 });
   }
 
-  const pu: any = await getPrivy().getUser(userId);
-  const xName = String(pu?.twitter?.username || "").toLowerCase();
-  if (xName !== p.recipient_x) {
+  // Ownership: bound to the permanent X user id when we have it (falls back to the handle for older tips)
+  const owner = p.x_id ? !!xSub && xSub === String(p.x_id) : xName === String(p.recipient_x).toLowerCase();
+  if (!owner) {
     return NextResponse.json({ error: `This money was sent to @${p.recipient_x}. Please sign in with that X account.` }, { status: 403 });
   }
 
@@ -78,6 +84,10 @@ export async function POST(req: Request) {
   async function result(s: "CLAIMED" | "FAILED" | "PENDING") {
     if (s === "CLAIMED") {
       const r = await sql`select claim_amount from payments where id = ${id}`;
+      if (xSub) {
+        // Link the verified X account to this wallet (ignored if already linked elsewhere)
+        try { await sql`update users set x_id = ${xSub}, x_username = ${xName || null} where id = ${userId} and x_id is null`; } catch {}
+      }
       return NextResponse.json({ status: "CLAIMED", received: received(r[0].claim_amount) });
     }
     if (s === "FAILED") {

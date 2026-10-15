@@ -36,8 +36,7 @@ async function toJpeg(file: File): Promise<string> {
 }
 
 export default function ProfilePage() {
-  const privy: any = usePrivy();
-  const { ready, authenticated, getAccessToken } = privy;
+  const { ready, authenticated, getAccessToken } = usePrivy();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [p, setP] = useState<Profile | null>(null);
@@ -46,32 +45,6 @@ export default function ProfilePage() {
   const [v, setV] = useState(0);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const [xl, setXl] = useState("");
-  const [xmsg, setXmsg] = useState("");
-
-  async function syncX() {
-    try {
-      const r = await api("/api/profile/sync-x", { method: "POST" });
-      const d = await r.json();
-      if (r.ok) { setXl(d.x?.username || ""); setXmsg(""); }
-      else setXmsg(d.error || "We couldn't link your X account.");
-    } catch { setXmsg("We couldn't link your X account."); }
-  }
-
-  useEffect(() => {
-    if (!ready || !authenticated) return;
-    api("/api/profile/sync-x").then((r) => r.json()).then((d) => {
-      if (d.x?.username) setXl(d.x.username);
-      else if (privy.user?.twitter) syncX();
-    }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, authenticated]);
-
-  async function linkX() {
-    setXmsg("");
-    try { await privy.linkTwitter?.(); } catch {}
-    await syncX();
-  }
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -175,18 +148,6 @@ export default function ProfilePage() {
           </div>
           {msg && <p className="cp-muted" style={{ margin: 0, fontSize: 13 }}>{msg}</p>}
         </div>
-      </div>
-      <div className="cp-panel" style={{ marginTop: 14 }}>
-        <div className="cp-ph"><h2>Linked X account</h2></div>
-        {xl ? (
-          <p style={{ margin: 0 }}>✓ Linked to <b>@{xl}</b>. Tips sent to your @handle now go straight into your CashPay wallet.</p>
-        ) : (
-          <>
-            <p className="cp-muted" style={{ marginTop: 0 }}>Link your X account so tips sent to your @handle go straight into your CashPay wallet.</p>
-            <button className="cp-btn primary" onClick={linkX}>Link X account</button>
-          </>
-        )}
-        {xmsg && <p className="cp-muted" style={{ fontSize: 13 }}>{xmsg}</p>}
       </div>
     </AppShell>
   );

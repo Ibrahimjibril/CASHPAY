@@ -5,16 +5,13 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import Loader from "@/app/components/Loader";
 import TokenPicker from "@/app/components/TokenPicker";
-import XAvatar from "@/app/components/XAvatar";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
 import { toSite } from "@/lib/site";
 import { tweetChunks, tweetHref } from "@/lib/share";
 
 type Kind = "user" | "email" | "x" | "wallet";
-type Row = { label: string; kind: Kind; address: string; amount: string; units: bigint; email?: string; x?: string; escrowId?: string; avatar?: string; name?: string };
-type XSel = { id: string; username: string; name: string; avatar: string; amount: string };
-type XRes = { id: string; username: string; name: string; avatar: string; verified: boolean; cashpay: string | null };
+type Row = { label: string; kind: Kind; address: string; amount: string; units: bigint; email?: string; x?: string; escrowId?: string };
 type Result = { id: string; leg: number; status: string };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,11 +40,6 @@ export default function BulkSend() {
   const [explorer, setExplorer] = useState("");
   const [copied, setCopied] = useState(-1);
   const [batchHash, setBatchHash] = useState("");
-  const [xq, setXq] = useState("");
-  const [xRes, setXRes] = useState<XRes[]>([]);
-  const [xNote, setXNote] = useState("");
-  const [xBusy, setXBusy] = useState(false);
-  const [xSel, setXSel] = useState<XSel[]>([]);
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -75,33 +67,6 @@ export default function BulkSend() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
 
-  // X account search (official X API through our server)
-  useEffect(() => {
-    const s = xq.trim().replace(/^@/, "");
-    if (s.length < 2) { setXRes([]); setXNote(""); return; }
-    const t = setTimeout(async () => {
-      setXBusy(true);
-      try {
-        const r = await api(`/api/x/search?q=${encodeURIComponent(s)}`);
-        const d = await r.json();
-        setXRes(d.users || []);
-        setXNote(d.error || (d.exactOnly && (d.users || []).length === 0 ? "No exact match. Type the full @username." : d.exactOnly ? "Tip: type the full @username to find an account." : ""));
-      } catch { setXRes([]); setXNote("We couldn't search X right now."); }
-      setXBusy(false);
-    }, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [xq]);
-
-  function addX(u: XRes) {
-    if (xSel.some((s) => s.id === u.id)) return;
-    if (xSel.length >= 20) { setMsg("You can send to up to 20 recipients at a time."); return; }
-    setXSel([...xSel, { id: u.id, username: u.username, name: u.name, avatar: u.avatar, amount: "" }]);
-    setXq("");
-    setXRes([]);
-    setXNote("");
-  }
-
   async function prepare() {
     setMsg("");
     const out: { raw: string; amount: string }[] = [];
@@ -112,43 +77,16 @@ export default function BulkSend() {
       if (!parseUnits6(amt)) errs.push(`Line ${i + 1}: add a valid amount for ${t[0]}`);
       else out.push({ raw: t[0], amount: amt });
     });
-    const xs: { s: XSel; amount: string }[] = [];
-    xSel.forEach((s) => {
-      const amt = (s.amount || common).trim();
-      if (!parseUnits6(amt)) errs.push(`Add a valid amount for @${s.username}`);
-      else xs.push({ s, amount: amt });
-    });
     if (errs.length) return setMsg(errs.slice(0, 3).join("\n"));
-    const count = out.length + xs.length;
-    if (count === 0) return setMsg("Add at least one recipient.");
-    if (count > 20) return setMsg("You can send to up to 20 recipients at a time.");
+    if (out.length === 0) return setMsg("Add at least one recipient.");
+    if (out.length > 20) return setMsg("You can send to up to 20 recipients at a time.");
 
     setStep("preparing");
     const rs: Row[] = [];
     const bad: string[] = [];
-    let n = 0;
-
-    // X accounts chosen from search: resolved by their permanent X id
-    for (const { s, amount } of xs) {
-      n++;
-      setProgress(`Preparing ${n} of ${count}…`);
-      const units = parseUnits6(amount) as bigint;
-      try {
-        const r = await api("/api/recipients/resolve-x", { method: "POST", body: JSON.stringify({ xId: s.id }) });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error || "couldn't prepare");
-        const xu = d.x || {};
-        if (d.kind === "user") rs.push({ label: `@${d.username}`, kind: "user", address: d.address, amount, units, avatar: xu.avatar || s.avatar, name: xu.name || s.name });
-        else rs.push({ label: `@${d.handle}`, kind: "x", address: d.address, amount, units, x: d.handle, escrowId: d.escrowId, avatar: xu.avatar || s.avatar, name: xu.name || s.name });
-      } catch (e: any) {
-        bad.push(`@${s.username}: ${e?.message || "couldn't prepare"}`);
-      }
-    }
-
-    // other recipients typed in the box
-    for (const { raw, amount } of out) {
-      n++;
-      setProgress(`Preparing ${n} of ${count}…`);
+    for (let i = 0; i < out.length; i++) {
+      setProgress(`Preparing ${i + 1} of ${out.length}…`);
+      const { raw, amount } = out[i];
       const units = parseUnits6(amount) as bigint;
       try {
         if (isAddress(raw)) {
@@ -169,9 +107,8 @@ export default function BulkSend() {
             const r = await api("/api/recipients/resolve-x", { method: "POST", body: JSON.stringify({ handle: h }) });
             const d = await r.json();
             if (!r.ok) throw new Error(d.error || "couldn't prepare");
-            const xu = d.x || {};
-            if (d.kind === "user") rs.push({ label: `@${d.username}`, kind: "user", address: d.address, amount, units, avatar: xu.avatar, name: xu.name });
-            else rs.push({ label: `@${d.handle}`, kind: "x", address: d.address, amount, units, x: d.handle, escrowId: d.escrowId, avatar: xu.avatar, name: xu.name });
+            if (d.kind === "user") rs.push({ label: `@${d.username}`, kind: "user", address: d.address, amount, units });
+            else rs.push({ label: `@${d.handle}`, kind: "x", address: d.address, amount, units, x: d.handle, escrowId: d.escrowId });
           }
         } else {
           throw new Error("not recognised");
@@ -180,14 +117,7 @@ export default function BulkSend() {
         bad.push(`${raw}: ${e?.message || "couldn't prepare"}`);
       }
     }
-
     if (bad.length) { setMsg("Fix these and try again:\n" + bad.slice(0, 4).join("\n")); setStep("form"); return; }
-    const seen = new Set<string>();
-    for (const r of rs) {
-      const k = r.address.toLowerCase();
-      if (seen.has(k)) { setMsg(`${r.label} is in the list more than once.`); setStep("form"); return; }
-      seen.add(k);
-    }
     if (me?.wallet_address && rs.some((r) => r.address.toLowerCase() === me.wallet_address!.toLowerCase())) {
       setMsg("You can't include yourself in the list."); setStep("form"); return;
     }
@@ -237,7 +167,7 @@ export default function BulkSend() {
     setStep("done");
   }
 
-  function reset() { setText(""); setRows([]); setResults([]); setXSel([]); setMsg(""); setBatchHash(""); setStep("form"); }
+  function reset() { setText(""); setRows([]); setResults([]); setMsg(""); setBatchHash(""); setStep("form"); }
 
   if (!ready || !authenticated || !me) return <Loader />;
 
@@ -265,10 +195,7 @@ export default function BulkSend() {
               const link = res && (r.kind === "email" || r.kind === "x") ? `${origin}/claim/${res.id}` : "";
               return (
                 <div key={i} className="card" style={{ textAlign: "left" }}>
-                  <div className="xconfirm">
-                    {r.avatar && <XAvatar src={r.avatar} size={36} />}
-                    <span><b>{r.label}</b> <span className="small">· ${r.amount} · {KIND[r.kind]}</span></span>
-                  </div>
+                  <b>{r.label}</b> <span className="small">· ${r.amount} · {KIND[r.kind]}</span>
                   <div className="small">{res ? (res.status === "CONFIRMED" ? "✓ Confirmed on Tempo" : res.status === "FAILED" ? "Failed" : "Confirming…") : "Recording…"}</div>
                   {link && res?.status === "CONFIRMED" && (
                     <div className="cta" style={{ marginTop: 8 }}>
@@ -311,14 +238,10 @@ export default function BulkSend() {
       {step === "review" && (
         <>
           <h1 className="h-sm">Review batch</h1>
-          <p className="small">Check every recipient and amount. Nothing is sent until you confirm.</p>
           <div className="list">
             {rows.map((r, i) => (
               <div key={i} className="act" style={{ cursor: "default" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {r.avatar && <XAvatar src={r.avatar} size={36} />}
-                  <span><b>{r.label}</b><span className="small" style={{ display: "block" }}>{r.name ? `${r.name} · ` : ""}{KIND[r.kind]}</span></span>
-                </span>
+                <span><b>{r.label}</b><span className="small" style={{ display: "block" }}>{KIND[r.kind]}</span></span>
                 <b>${r.amount}</b>
               </div>
             ))}
@@ -342,58 +265,20 @@ export default function BulkSend() {
           <h1 className="h-sm">Bulk send</h1>
           <div className="form">
             <TokenPicker value={tok} onChange={setTok} balances={bals} />
-
-            <div className="card" style={{ textAlign: "left" }}>
-              <b>Add X accounts</b>
-              <input value={xq} onChange={(e) => setXq(e.target.value)} placeholder="Search X name or @username" autoCapitalize="none" style={{ marginTop: 8, width: "100%" }} />
-              {xBusy && <p className="small">Searching…</p>}
-              {xNote && <p className="small">{xNote}</p>}
-              <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-                {xRes.map((u) => {
-                  const added = xSel.some((s) => s.id === u.id);
-                  return (
-                    <button type="button" key={u.id} className="xr" disabled={added} onClick={() => addX(u)}>
-                      <XAvatar src={u.avatar} size={44} />
-                      <span><b>{u.name}</b><small>@{u.username}</small></span>
-                      <span className="tag">{added ? "Added ✓" : u.cashpay ? "On CashPay · Add" : "+ Add"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {xSel.length > 0 && (
-                <>
-                  <div className="small" style={{ marginTop: 14, fontWeight: 700 }}>Selected ({xSel.length})</div>
-                  <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-                    {xSel.map((s) => (
-                      <div key={s.id} className="xsel">
-                        <XAvatar src={s.avatar} size={40} />
-                        <span style={{ flex: 1, minWidth: 0 }}>
-                          <b>{s.name}</b>
-                          <small style={{ display: "block", color: "var(--muted)" }}>@{s.username}</small>
-                        </span>
-                        <input inputMode="decimal" placeholder={common || "Amount"} value={s.amount} onChange={(e) => setXSel(xSel.map((z) => (z.id === s.id ? { ...z, amount: e.target.value } : z)))} />
-                        <button type="button" className="xdel" aria-label="Remove" onClick={() => setXSel(xSel.filter((z) => z.id !== s.id))}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
             <label>
-              Other recipients (one per line: recipient amount)
-              <textarea className="bulk" value={text} onChange={(e) => setText(e.target.value)} rows={5} autoCapitalize="none"
-                placeholder={"@john 5\nsarah@gmail.com 10\n0x1234…abcd 20"} />
+              Recipients (one per line: recipient amount)
+              <textarea className="bulk" value={text} onChange={(e) => setText(e.target.value)} rows={7} autoCapitalize="none"
+                placeholder={"@john 5\nsarah@gmail.com 10\n0x1234…abcd 20\n@eeeman33 2"} />
             </label>
             <label>Same amount for everyone (optional)
               <div className="amtrow">
                 <input inputMode="decimal" value={common} onChange={(e) => setCommon(e.target.value)} placeholder="5.00" />
-                <button type="button" className="maxbtn" onClick={() => setCommon(maxSendable(bals[tok] || "0", lineCount + xSel.length))}>Max</button>
+                <button type="button" className="maxbtn" onClick={() => setCommon(maxSendable(bals[tok] || "0", lineCount))}>Max</button>
               </div>
             </label>
             <label>Message (optional)<input value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={140} placeholder="Thanks, team!" /></label>
             {msg && <p className="small" style={{ whiteSpace: "pre-line" }}>{msg}</p>}
-            <button className="btn primary" onClick={prepare}>Review</button>
+            <button className="btn primary" onClick={prepare}>Continue</button>
           </div>
         </>
       )}

@@ -55,7 +55,7 @@ export async function GET(req: Request) {
   }
   const known = new Set<string>();
   for (const r of rows) { if (r.tx_hash) known.add(String(r.tx_hash).toLowerCase()); if (r.claim_tx) known.add(String(r.claim_tx).toLowerCase()); }
-  for (const x of await incomingTransfers(wallet)) {
+  for (const x of await incomingTransfers(wallet, new URL(req.url).searchParams.get("fresh") === "1")) {
     if (known.has(x.hash)) continue;
     evs.push({ id: `x-${x.hash}-${x.logIndex}`, kind: "received", tip: false, amount: x.amount, ts: x.ts, status: "CONFIRMED", who: short(x.sender) });
   }

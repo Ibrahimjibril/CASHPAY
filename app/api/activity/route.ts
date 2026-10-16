@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       order by p.created_at desc
       limit 50`,
     sql`select claim_tx from payments where claimed_by = ${userId} and claim_tx is not null`,
-    incomingTransfers(wallet),
+    incomingTransfers(wallet, new URL(req.url).searchParams.get("fresh") === "1"),
   ]);
 
   const paymentItems = rows.map((r: any) => {

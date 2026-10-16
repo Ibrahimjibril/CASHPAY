@@ -72,7 +72,7 @@ export default function Tips() {
       <div className="form">
         {picked ? (
           <div className="card">
-            <b>{label}</b> <span className="small">{picked.display_name ? `· ${picked.display_name}` : "· not on CashPay yet, they'll claim with X"}</span>
+            <b>{label}</b> <span className="small">{picked.display_name ? `· ${picked.display_name}` : "· X account (straight to their wallet if linked, otherwise they claim with X)"}</span>
             <div><button className="btn" onClick={() => setPicked(null)}>Change</button></div>
           </div>
         ) : (
@@ -84,7 +84,7 @@ export default function Tips() {
             {searched && results.length === 0 && HANDLE.test(q) && (
               <div className="card">
                 <b>@{q}</b>
-                <p className="small">Not on CashPay yet. You can still tip them. They'll claim it by signing in with X.</p>
+                <p className="small">You can tip any X account. If they've linked it to CashPay, the tip goes straight to their wallet. Otherwise they claim it by signing in with X.</p>
                 <button className="btn primary" onClick={() => setPicked({ x: q.toLowerCase() })}>Tip @{q}</button>
               </div>
             )}

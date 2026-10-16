@@ -70,6 +70,22 @@ export default function Activity() {
     });
   }, [items, filter, search, t]);
 
+  const [refreshing, setRefreshing] = useState(false);
+  async function reload() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const r = await api(`/api/activity?fresh=1&t=${Date.now()}`);
+      const d = await r.json();
+      if (r.ok) {
+        setItems(d.items || []);
+        setExplorer(d.explorer || "");
+        try { sessionStorage.setItem("cp-act", JSON.stringify({ items: d.items || [], explorer: d.explorer || "" })); } catch {}
+      }
+    } catch {}
+    setRefreshing(false);
+  }
+
   async function resend() {
     if (!sel) return;
     setBusy(true);
@@ -102,6 +118,9 @@ export default function Activity() {
       </div>
 
       <div className="cp-panel">
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button className={`cp-btn${refreshing ? " spin" : ""}`} onClick={reload} disabled={refreshing}><Icon name="refresh" size={16} /> {refreshing ? "Refreshing…" : "Refresh"}</button>
+        </div>
         <div className="cp-tabs">
           {([["all", "fAll"], ["received", "fRecv"], ["sent", "fSent"], ["tips", "fTips"]] as [Filter, string][]).map(([k, l]) => (
             <button key={k} className={`cp-tab${filter === k ? " on" : ""}`} onClick={() => setFilter(k)}>{t(l)}</button>

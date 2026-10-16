@@ -70,6 +70,26 @@ export default function Dashboard() {
   const [range, setRange] = useState(7);
   const [copied, setCopied] = useState(false);
   const [showAssets, setShowAssets] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  async function refresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const token = await getAccessToken();
+      const r = await fetch(`/api/dashboard?fresh=1&t=${Date.now()}`, { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+      const d = await r.json();
+      if (r.ok) {
+        setData(d);
+        setErr("");
+        try { sessionStorage.setItem("cp-dash2", JSON.stringify(d)); } catch {}
+      } else {
+        setErr(t("dashErr"));
+      }
+    } catch {
+      setErr(t("dashErr"));
+    }
+    setRefreshing(false);
+  }
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -174,7 +194,7 @@ export default function Dashboard() {
               <button aria-label="Copy" onClick={() => { navigator.clipboard.writeText(wallet); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
                 <Icon name={copied ? "check" : "copy"} size={16} />
               </button>
-              <button aria-label="Refresh" onClick={load}><Icon name="refresh" size={16} /></button>
+              <button aria-label="Refresh" className={refreshing ? "spin" : ""} onClick={refresh}><Icon name="refresh" size={16} /></button>
             </div>
           )}
           <a className="cp-pill" href={d.explorerUrl} target="_blank" rel="noreferrer">

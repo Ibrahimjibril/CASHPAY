@@ -5,11 +5,12 @@ export type Incoming = { hash: string; logIndex: number; sender: string; amount:
 const cache = new Map<string, { at: number; data: Incoming[] }>();
 
 // Incoming token transfers to a wallet, read from Tempo's public API (includes deposits from other wallets/apps).
-export async function incomingTransfers(wallet: string): Promise<Incoming[]> {
+// force = true skips the short cache (used by the Refresh buttons).
+export async function incomingTransfers(wallet: string, force = false): Promise<Incoming[]> {
   const w = String(wallet || "").toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(w)) return [];
   const hit = cache.get(w);
-  if (hit && Date.now() - hit.at < 45000) return hit.data;
+  if (!force && hit && Date.now() - hit.at < 45000) return hit.data;
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 6000);

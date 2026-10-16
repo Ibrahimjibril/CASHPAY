@@ -24,7 +24,7 @@ export async function GET(req: Request) {
         where p.sender_id = ${userId} and p.claim_status = 'CLAIMED' and p.claimed_at is not null
         order by p.claimed_at desc limit 20`,
     sql`select claim_tx from payments where claimed_by = ${userId} and claim_tx is not null`,
-    incomingTransfers(w),
+    incomingTransfers(w, new URL(req.url).searchParams.get("fresh") === "1"),
   ]);
 
   const skip = new Set<string>();

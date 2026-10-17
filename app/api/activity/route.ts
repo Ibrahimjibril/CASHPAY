@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const [rows, claims, ext]: any[] = await Promise.all([
     sql`
-      select p.id, p.amount, p.memo, p.status, p.tx_hash, p.created_at, p.recipient_email, p.recipient_x, p.claim_status, p.token,
+      select p.id, p.amount, p.memo, p.status, p.tx_hash, p.created_at, p.recipient_email, p.recipient_x, p.claim_status, p.expires_at, p.token,
              p.recipient_address, p.sender_id, su.username as sender_username, ru.username as recipient_username
       from payments p
       join users su on su.id = p.sender_id
@@ -43,6 +43,7 @@ export async function GET(req: Request) {
       recipientEmail: sent ? r.recipient_email : null,
       claimable: sent && !!(r.recipient_email || r.recipient_x),
       claimStatus: r.claim_status,
+      expiresAt: r.expires_at,
       token: symbolOf(r.token),
     };
   });

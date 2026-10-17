@@ -24,25 +24,37 @@ export default function WalletPage() {
   const [explorer, setExplorer] = useState("");
   const [copied, setCopied] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [spin, setSpin] = useState(false);
+  const [updated, setUpdated] = useState("");
+  const [err, setErr] = useState("");
 
   async function api(path: string) {
     const token = await getAccessToken();
-    return fetch(path, { headers: { authorization: `Bearer ${token}` } });
+    return fetch(path, { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+  }
+  const okJson = async (r: Response) => (r.ok ? r.json() : null);
+
+  async function load(fresh = false) {
+    const k = fresh ? `?fresh=1&t=${Date.now()}` : "";
+    const [p, b, a]: any[] = await Promise.all([
+      api("/api/profile").then(okJson).catch(() => null),
+      api("/api/balance" + (fresh ? `?t=${Date.now()}` : "")).then(okJson).catch(() => null),
+      api("/api/activity" + k).then(okJson).catch(() => null),
+    ]);
+    if (p && p.profile === null) { router.replace("/dashboard"); return; }
+    if (p?.profile) setAddress(p.profile.wallet_address || "");
+    if (b) { setTotal(b.total ?? "0.00"); setTokens(b.tokens || []); }
+    if (a) { setItems((a.items || []).slice(0, 10)); setExplorer(a.explorer || ""); }
+    setErr(!p && !b && !a ? "We couldn't refresh right now. Please try again." : "");
+    setUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    setLoaded(true);
   }
 
-  async function load() {
-    const [p, b, a]: any[] = await Promise.all([
-      api("/api/profile").then((r) => r.json()).catch(() => ({})),
-      api("/api/balance").then((r) => r.json()).catch(() => ({})),
-      api("/api/activity").then((r) => r.json()).catch(() => ({})),
-    ]);
-    if (p.profile === null) { router.replace("/dashboard"); return; }
-    setAddress(p.profile?.wallet_address || "");
-    setTotal(b.total ?? "0.00");
-    setTokens(b.tokens || []);
-    setItems((a.items || []).slice(0, 10));
-    setExplorer(a.explorer || "");
-    setLoaded(true);
+  async function refresh() {
+    if (spin) return;
+    setSpin(true);
+    await load(true);
+    setSpin(false);
   }
 
   useEffect(() => {
@@ -59,10 +71,13 @@ export default function WalletPage() {
       <div className="cp-welcome">
         <div>
           <h1>My <span>{t("nav_wallet")}</span></h1>
-          <p>Your money on Tempo, in one place.</p>
+          <p>Your money on Tempo, in one place.{updated ? ` Updated ${updated}.` : ""}</p>
         </div>
-        <button className="cp-btn" onClick={load}><Icon name="refresh" size={16} /> Refresh</button>
+        <button className={`cp-btn${spin ? " spin" : ""}`} onClick={refresh} disabled={spin}>
+          <Icon name="refresh" size={16} /> {spin ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
+      {err && <p className="cp-muted" style={{ marginTop: 0 }}>{err}</p>}
 
       <div className="cp-panel">
         <div className="cp-muted" style={{ fontSize: 13 }}>Total balance</div>

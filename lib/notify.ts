@@ -7,7 +7,7 @@ const fmt = (a: string) => Number(a).toLocaleString("en-US", { minimumFractionDi
 export async function notifyRecipient(origin: string, paymentId: string, force = false): Promise<{ ok: boolean; error?: string }> {
   origin = process.env.APP_URL || SITE_URL;
   const rows = await sql`
-    select p.id, p.amount, p.memo, p.status, p.recipient_email, p.emailed,
+    select p.id, p.amount, p.memo, p.status, p.recipient_email, p.emailed, p.expires_at,
            su.username as sender_username, ru.email as user_email
     from payments p
     join users su on su.id = p.sender_id
@@ -27,6 +27,7 @@ export async function notifyRecipient(origin: string, paymentId: string, force =
     memo: p.memo,
     bannerUrl: `${origin}/api/email-banner?id=${p.id}`,
     xIconUrl: `${origin}/api/x-icon`,
+    expires: p.expires_at ? new Date(p.expires_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : undefined,
     link: claim ? `${origin}/claim/${p.id}` : `${origin}/dashboard`,
   });
   if (r.ok) await sql`update payments set emailed = true where id = ${paymentId}`;

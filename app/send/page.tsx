@@ -7,10 +7,10 @@ import Loader from "@/app/components/Loader";
 import TokenPicker from "@/app/components/TokenPicker";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
-import { toSite } from "@/lib/site";
+import { toSite, CLAIM_DAYS } from "@/lib/site";
 
 type Person = { username: string; display_name: string; wallet_address: string };
-type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string; avatar?: string; name?: string };
+type Recipient = { label: string; sub?: string; address: string; email?: string; x?: string; escrowId?: string; tag?: string };
 type Done = { hash: string; id?: string; status: string; explorerUrl: string; emailed: boolean };
 
 const QUICK = ["5", "10", "20", "50", "100"];
@@ -45,24 +45,11 @@ export default function Send() {
   }
 
   function applyX(d: any) {
-    const xu = d.x || {};
     if (d.kind === "user") {
-      setTo({ label: `@${d.username}`, sub: `X @${xu.username || d.handle} · on CashPay`, address: d.address, avatar: xu.avatar, name: xu.name });
+      setTo({ label: `@${d.username}`, sub: `X @${d.handle} · on CashPay · goes straight to their wallet`, address: d.address, tag: d.handle });
     } else {
-      setTo({ label: `@${d.handle}`, sub: `${xu.name ? xu.name + " · " : ""}Not on CashPay yet · they'll claim with X`, address: d.address, x: d.handle, escrowId: d.escrowId, avatar: xu.avatar, name: xu.name });
+      setTo({ label: `@${d.handle}`, sub: "Not on CashPay yet · they'll claim with X", address: d.address, x: d.handle, escrowId: d.escrowId });
     }
-  }
-
-  async function resolveXId(xId: string) {
-    setBusy(true);
-    setMsg("");
-    try {
-      const r = await api("/api/recipients/resolve-x", { method: "POST", body: JSON.stringify({ xId }) });
-      const d = await r.json();
-      if (!r.ok) setMsg(d.error || "We couldn't prepare this tip.");
-      else applyX(d);
-    } catch { setMsg("We couldn't prepare this tip. Please try again."); }
-    setBusy(false);
   }
 
   async function resolveX(handle: string) {
@@ -104,7 +91,6 @@ export default function Send() {
     const sp = new URLSearchParams(window.location.search);
     const u = (sp.get("u") || "").replace(/^@/, "").toLowerCase();
     const x = (sp.get("x") || "").replace(/^@/, "").toLowerCase();
-    const xid = sp.get("xid") || "";
     if (sp.get("amount")) setAmount(sp.get("amount") as string);
     if (sp.get("memo")) setMemo(sp.get("memo") as string);
     if (u) {
@@ -114,8 +100,6 @@ export default function Send() {
           const p = (d.users || []).find((z: Person) => z.username === u);
           if (p) setTo({ label: "@" + p.username, sub: p.display_name, address: p.wallet_address });
         });
-    } else if (xid) {
-      resolveXId(xid);
     } else if (x) {
       resolveX(x);
     }
@@ -146,7 +130,7 @@ export default function Send() {
       const d = await r.json();
       if (!r.ok) { setMsg(d.error || "We couldn't prepare this payment."); }
       else if (d.kind === "user") setTo({ label: `@${d.username}`, sub: q, address: d.address });
-      else setTo({ label: q.toLowerCase(), sub: "New to CashPay. They'll get a claim link.", address: d.address, email: q.toLowerCase() });
+      else setTo({ label: q.toLowerCase(), sub: "New to CashPay. They'll get a claim link.", address: d.address, email: q.toLowerCase(), escrowId: d.escrowId });
     } catch { setMsg("We couldn't prepare this payment. Please try again."); }
     setBusy(false);
   }
@@ -215,8 +199,9 @@ export default function Send() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const claimLink = done?.id && (to?.email || to?.x) ? `${origin}/claim/${done.id}` : "";
   const isTip = memo.startsWith("Tip");
-  const shareText = to?.x
-    ? `I just tipped @${to.x} $${amount} on CashPay 💸\n\nClaim it here:`
+  const tagH = to?.x || to?.tag;
+  const shareText = tagH
+    ? `I just tipped @${tagH} $${amount} on CashPay 💸${claimLink ? "\n\nClaim it here:" : ""}`
     : to?.email
     ? `I just sent someone $${amount} on CashPay 💸\n\nClaim it here:`
     : `I just sent $${amount} on CashPay 💸`;
@@ -240,6 +225,7 @@ export default function Send() {
             <div className="card" style={{ width: "100%", textAlign: "left" }}>
               <b>{done.emailed ? "We emailed them a claim link." : "Claim link for them:"}</b>
               <p className="small" style={{ wordBreak: "break-all" }}>{claimLink}</p>
+              <p className="small">If it isn't claimed within {CLAIM_DAYS} days, the money returns to your wallet.</p>
               <button className="btn" onClick={() => { navigator.clipboard.writeText(claimLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? "Copied ✓" : "Copy link"}</button>
             </div>
           )}
@@ -265,9 +251,11 @@ export default function Send() {
             <div className="small">You are sending</div>
             <div className="amt">${amount}</div>
             <p>To: <b>{to.label}</b></p>
+            {to.sub && <p className="small">{to.sub}</p>}
             <p className="small">Network: Tempo · Asset: {tok}</p>
             {memo && <p className="small">Message: “{memo}”</p>}
             {to.x && <p className="small">@{to.x} will claim this by signing in with X.</p>}
+            {to.escrowId && <p className="small">If it isn't claimed within {CLAIM_DAYS} days, the money returns to your wallet.</p>}
           </div>
           <div className="cta">
             <button className="btn primary" onClick={confirm}>Confirm & Send</button>
@@ -283,7 +271,7 @@ export default function Send() {
             <TokenPicker value={tok} onChange={setTok} balances={bals} />
             {to ? (
               <div className="card">
-                {to.avatar && <img src={to.avatar} alt="" width={40} height={40} style={{ borderRadius: "50%", verticalAlign: "middle", marginRight: 10 }} referrerPolicy="no-referrer" />}<b>{to.label}</b> {to.sub && <span className="small">· {to.sub}</span>}
+                <b>{to.label}</b> {to.sub && <span className="small">· {to.sub}</span>}
                 <div><button className="btn" onClick={() => setTo(null)}>Change</button></div>
               </div>
             ) : (
@@ -296,7 +284,7 @@ export default function Send() {
                 ))}
                 {isHandle && results.length === 0 && (
                   <button className="btn" disabled={busy} onClick={() => resolveX(q.replace(/^@/, "").toLowerCase())}>
-                    {busy ? "Preparing…" : `Send to ${q} (they can claim with X)`}
+                    {busy ? "Preparing…" : `Send to ${q} (X account)`}
                   </button>
                 )}
                 {isAddress(q) && <button className="btn" onClick={() => setTo({ label: short(q), address: q })}>Use address {short(q)}</button>}

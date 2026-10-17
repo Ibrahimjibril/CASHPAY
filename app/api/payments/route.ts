@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const to = parsed.data.to.toLowerCase();
   const amount = parsed.data.amount.trim();
   const memo = parsed.data.memo || null;
-  const recipientEmail = parsed.data.recipientEmail ?? null;
+  let recipientEmail: string | null = parsed.data.recipientEmail ?? null;
   if (parsed.data.token && !tokenByAddress(parsed.data.token)) return NextResponse.json({ error: "Unsupported asset." }, { status: 400 });
   const token = (tokenByAddress(parsed.data.token) ?? tokenBySymbol(DEFAULT_TOKEN)!).address.toLowerCase();
   
@@ -59,12 +59,13 @@ export async function POST(req: Request) {
   let escrowId: string | null = null;
   let recipientX: string | null = null;
   if (parsed.data.escrowId) {
-    const e = await sql`select created_by, handle, address from escrows where id = ${parsed.data.escrowId}`;
+    const e = await sql`select created_by, handle, address, email from escrows where id = ${parsed.data.escrowId}`;
     if (!e[0] || e[0].created_by !== userId || e[0].address !== to) {
       return NextResponse.json({ error: "Invalid recipient." }, { status: 400 });
     }
     escrowId = parsed.data.escrowId;
-    recipientX = e[0].handle;
+    recipientX = e[0].email ? null : e[0].handle;
+    if (e[0].email) recipientEmail = e[0].email;
   }
 
   const explorerUrl = `${TEMPO.explorer}/tx/${hash}`;

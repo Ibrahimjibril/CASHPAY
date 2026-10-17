@@ -4,7 +4,7 @@ const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
 export type EmailKind = "claim" | "received";
-type P = { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string; xIconUrl?: string };
+type P = { kind: EmailKind; amount: string; from: string; memo?: string | null; link: string; bannerUrl?: string; xIconUrl?: string; expires?: string };
 
 // Downloads an image so it can be embedded inside the email itself (Gmail never hides embedded images).
 async function grab(url?: string): Promise<Buffer | null> {
@@ -66,7 +66,7 @@ ${memo}
 <a href="${esc(p.link)}" style="display:inline-block;padding:17px 40px;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:700;color:#04241b;text-decoration:none;border-radius:14px">${esc(button)} &rarr;</a>
 </td></tr></table>
 </td></tr>
-<tr><td align="center" style="padding:10px 32px 14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#8ba2b6">${esc(note)}</td></tr>
+<tr><td align="center" style="padding:10px 32px 14px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#8ba2b6">${esc(note)}${p.expires ? "<br>This link expires on " + esc(p.expires) + ". Unclaimed money returns to the sender." : ""}</td></tr>
 ${copy}
 <tr><td style="padding:22px 32px 28px;font-family:Arial,Helvetica,sans-serif">
 <div style="border-top:1px solid #143049;margin:0 0 16px;font-size:0;line-height:0">&nbsp;</div>

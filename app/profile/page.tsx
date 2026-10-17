@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useLinkAccount } from "@privy-io/react-auth";
 import AppShell from "../components/AppShell";
 import Loader from "../components/Loader";
 import Avatar from "../components/Avatar";
@@ -36,20 +36,49 @@ async function toJpeg(file: File): Promise<string> {
 }
 
 export default function ProfilePage() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
+  const { ready, authenticated, getAccessToken, user } = usePrivy();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const tried = useRef(false);
   const [p, setP] = useState<Profile | null>(null);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [v, setV] = useState(0);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [xl, setXl] = useState("");
+  const [xmsg, setXmsg] = useState("");
+  const [xbusy, setXbusy] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
     return fetch(path, { ...init, headers: { "content-type": "application/json", authorization: `Bearer ${token}` } });
   }
+
+  // Saves the X account that Privy verified (the server reads it from Privy, never from the browser)
+  async function syncX() {
+    try {
+      const r = await api("/api/profile/sync-x", { method: "POST" });
+      const d = await r.json();
+      if (r.ok) { setXl(d.x?.username || ""); setXmsg(""); }
+      else setXmsg(d.error || "We couldn't link your X account.");
+    } catch { setXmsg("We couldn't link your X account. Please try again."); }
+    setXbusy(false);
+  }
+
+  const { linkTwitter } = useLinkAccount({
+    onSuccess: () => { syncX(); },
+    onError: (error: any) => {
+      setXbusy(false);
+      const code = String(error?.message || error || "");
+      if (code.includes("exited")) return;
+      if (code.includes("linked_to_another_user")) {
+        setXmsg("This X account is already used by another login. Sign in with X instead, or use a different X account.");
+      } else {
+        setXmsg("We couldn't link your X account. Please try again.");
+      }
+    },
+  });
 
   useEffect(() => {
     if (!ready) return;
@@ -62,6 +91,16 @@ export default function ProfilePage() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
+
+  // Shows the linked X account; if the login already has X (e.g. right after coming back from X), saves it
+  useEffect(() => {
+    if (!ready || !authenticated) return;
+    api("/api/profile/sync-x").then((r) => r.json()).then((d) => {
+      if (d.x?.username) { setXl(d.x.username); return; }
+      if ((user as any)?.twitter && !tried.current) { tried.current = true; syncX(); }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authenticated, user]);
 
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -129,6 +168,23 @@ export default function ProfilePage() {
           <button className="cp-btn primary" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? "Please wait…" : "Change photo"}</button>
           <button className="cp-btn ghost" disabled={busy} onClick={removePhoto}>Remove photo</button>
         </div>
+      </div>
+
+      <div className="cp-panel" style={{ marginTop: 14 }}>
+        <div className="cp-ph"><h2>Linked X account</h2></div>
+        {xl ? (
+          <p style={{ margin: 0 }}>✓ Linked to <b>@{xl}</b>. Tips sent to your @handle now go straight into your CashPay wallet, with no claim link.</p>
+        ) : (
+          <>
+            <p className="cp-muted" style={{ marginTop: 0 }}>
+              Link your X account so tips sent to your @handle go straight into your CashPay wallet. No claim link needed.
+            </p>
+            <button className="cp-btn primary" disabled={xbusy} onClick={() => { setXbusy(true); setXmsg(""); linkTwitter(); }}>
+              {xbusy ? "Opening X…" : "Link X account"}
+            </button>
+          </>
+        )}
+        {xmsg && <p className="cp-muted" style={{ fontSize: 13, marginBottom: 0 }}>{xmsg}</p>}
       </div>
 
       <div className="cp-panel" style={{ marginTop: 14 }}>

@@ -391,3 +391,6 @@ a.cp-stat{display:block}
 .xsel input{width:96px;min-height:40px;padding:0 10px}
 .xdel{background:transparent;border:0;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
 .xconfirm{display:flex;align-items:center;gap:12px}
+
+/* refresh buttons show they are working */
+.spin svg{animation:cp-rot .8s linear infinite}

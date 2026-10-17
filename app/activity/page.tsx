@@ -11,7 +11,7 @@ import { useI18n } from "@/lib/i18n";
 type Item = {
   id: string; direction: "sent" | "received"; amount: string; memo: string | null; status: string;
   txHash: string; createdAt: string; fromLabel: string; toLabel: string; recipientEmail: string | null;
-  claimable: boolean; claimStatus: string | null; token: string;
+  claimable: boolean; claimStatus: string | null; token: string; expiresAt?: string | null;
 };
 type Filter = "all" | "received" | "sent" | "tips";
 
@@ -71,6 +71,21 @@ export default function Activity() {
   }, [items, filter, search, t]);
 
   const [refreshing, setRefreshing] = useState(false);
+  async function refund() {
+    if (!sel) return;
+    setBusy(true);
+    setNote("");
+    try {
+      const r = await api("/api/payments/refund", { method: "POST", body: JSON.stringify({ id: sel.id }) });
+      const d = await r.json();
+      setNote(r.ok ? "✓ Your money is being returned to your wallet." : d.error || "We couldn't return the money. Please try again.");
+      if (r.ok) reload();
+    } catch {
+      setNote("We couldn't return the money. Please try again.");
+    }
+    setBusy(false);
+  }
+
   async function reload() {
     if (refreshing) return;
     setRefreshing(true);
@@ -165,7 +180,8 @@ export default function Activity() {
               <div className="cp-kv"><span>{t("rDate")}</span><b>{new Date(sel.createdAt).toLocaleString()}</b></div>
               <div className="cp-kv"><span>{t("rAsset")}</span><b>{sel.token}</b></div>
               <div className="cp-kv"><span>{t("rNet")}</span><b>Tempo</b></div>
-              {sel.claimable && <div className="cp-kv"><span>{t("rClaim")}</span><b>{sel.claimStatus === "CLAIMED" ? t("rClaimed") : t("rWaiting")}</b></div>}
+              {sel.claimable && <div className="cp-kv"><span>{t("rClaim")}</span><b>{sel.claimStatus === "CLAIMED" ? t("rClaimed") : sel.claimStatus === "REFUNDED" ? "Returned to you" : sel.claimStatus === "REFUNDING" ? "Returning…" : t("rWaiting")}</b></div>}
+              {sel.claimable && sel.expiresAt && !["CLAIMED", "REFUNDED"].includes(String(sel.claimStatus)) && <div className="cp-kv"><span>Expires</span><b>{new Date(sel.expiresAt).toLocaleDateString()}</b></div>}
               <div className="cp-kv"><span>{t("rTx")}</span><b>{sel.txHash.slice(0, 10)}...{sel.txHash.slice(-6)}</b></div>
             </div>
             <p className="cp-muted" style={{ fontSize: 13 }}>{t("rTip")}</p>
@@ -173,6 +189,7 @@ export default function Activity() {
               {explorer && <a className="cp-btn" href={`${explorer}/tx/${sel.txHash}`} target="_blank" rel="noreferrer">{t("rExplorer")}</a>}
               {sent && sel.claimable && <button className="cp-btn" onClick={copyLink}>{copied ? t("rCopied") : t("rCopyLink")}</button>}
               {sent && sel.status === "CONFIRMED" && (!sel.claimable || !!sel.recipientEmail) && <button className="cp-btn" disabled={busy} onClick={resend}>{busy ? t("rSending") : t("rResend")}</button>}
+              {sent && sel.claimable && sel.expiresAt && new Date(sel.expiresAt) < new Date() && !["CLAIMED", "REFUNDED", "REFUNDING"].includes(String(sel.claimStatus)) && <button className="cp-btn primary" disabled={busy} onClick={refund}>Return money to my wallet</button>}
             </div>
             {note && <p className="cp-muted" style={{ fontSize: 13 }}>{note}</p>}
           </div>

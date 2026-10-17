@@ -96,7 +96,7 @@ export default function BulkSend() {
           const d = await r.json();
           if (!r.ok) throw new Error(d.error || "couldn't prepare");
           if (d.kind === "user") rs.push({ label: `@${d.username}`, kind: "user", address: d.address, amount, units });
-          else rs.push({ label: raw.toLowerCase(), kind: "email", address: d.address, amount, units, email: raw.toLowerCase() });
+          else rs.push({ label: raw.toLowerCase(), kind: "email", address: d.address, amount, units, email: raw.toLowerCase(), escrowId: d.escrowId });
         } else if (HANDLE.test(raw)) {
           const h = raw.replace(/^@/, "").toLowerCase();
           const s = await (await api(`/api/users/search?q=${encodeURIComponent(h)}`)).json();

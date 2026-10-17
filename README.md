@@ -2,86 +2,119 @@
 
 **Money for the social internet.** Send money just like sending a message.
 
-CashPay is a stablecoin payments app built on **Tempo mainnet**. You can pay anyone with a **@username**, an **email address**, an **X (Twitter) handle** or a **wallet address**. The person you pay does not need a wallet, crypto knowledge or a CashPay account in advance: they get a claim link, sign in, and the money is theirs.
+CashPay is a stablecoin payments app built on **Tempo mainnet**. Pay anyone with a **@username**, an **email address**, an **X handle** or a **wallet address**. The person you pay does not need a wallet or any crypto knowledge: they sign in and the money is theirs.
 
 - Live app: https://www.cashpayt.xyz
+- X: https://x.com/CashPay_
 - Repository: https://github.com/Ibrahimjibril/CASHPAY
-- Built by: Ibrahimjibril
 
-> Status: public alpha running on Tempo mainnet with real funds. Please use small amounts while testing.
+> Status: public alpha on Tempo mainnet with real funds. Use small amounts while testing.
 
 ## What you can do
 
-- **Sign in** with Google, email, X or an existing wallet. A secure embedded wallet is created automatically (Privy). CashPay never sees private keys.
-- **Send money** to a @username, an email, an X handle or a wallet address, with an optional message.
+- **Sign in** with Google, email, X or a wallet. A secure embedded wallet is created for you (Privy).
+- **Send money** to a @username, email, X handle or wallet address, in **USDT, USDC, OUSD or pathUSD**, with an optional message and a **Max** button.
 - **Pay people who are not on CashPay yet**
-  - **Email:** the recipient gets a claim email, signs in with that email and the money is already in their wallet.
-  - **X handle:** the sender gets a share card ("Share on X") that tags the handle and contains the claim link. The recipient taps "Connect X to claim" and the money is sent to their new wallet.
-- **Bulk send:** pay up to 20 people (mix of usernames, emails, X handles and wallet addresses) in **one transaction with one signature and one network fee**.
-- **Tips:** search a @username or any X handle and tip in two taps.
-- **Transaction history** with filters, search and a shareable **receipt** for each payment (copy claim link, resend email, view on explorer).
-- **Dashboard** with live balance, tips received, transaction count and a balance chart.
-- **Share previews:** every claim link has a branded preview card on X and WhatsApp.
-- **6 languages:** English, Chinese, French, Arabic (right-to-left), Hindi and Hausa.
-- Light and dark mode, mobile first.
-
-## Why Tempo
-
-CashPay uses Tempo features that make payments feel normal:
-
-- **TIP-20 stablecoin (OUSD)** is the money. Amounts are shown in dollars.
-- **Tempo transactions (type 118)** let us pay the **network fee in the stablecoin itself**, so users never need a separate gas token.
-- **Batched calls** in one Tempo transaction power Bulk Send.
-- EVM compatible, so standard tooling (viem, JSON-RPC) works.
+  - **Email:** they get a claim link and sign in with that email (code or Google).
+  - **X handle:** they claim by signing in with X. If they linked X to their CashPay profile, the tip goes **straight into their wallet** with no claim.
+- **Expiry and refunds:** unclaimed email and X payments return to the sender after **30 days**.
+- **Bulk Send:** pay up to 20 people in one transaction, one signature, one network fee.
+- **Tips**, **receipts** you can screenshot, share cards for X, and a shareable batch page for many tips at once.
+- **Wallet page:** balances per stablecoin, your receive address, and full history **including deposits sent from other wallets**.
+- **Profile:** photo, display name, bio, and a linked X account.
+- **Notifications** with "Mark all as read", **6 languages** (English, Chinese, French, Arabic, Hindi, Hausa), light and dark mode, mobile first.
 
 ## How it works
 
-    Registered user  ->  sender signs a transfer  ->  funds go straight to the recipient wallet
-    Email recipient  ->  Privy pre-generates a wallet for that email -> funds go there
-                         -> recipient signs in with the email (OTP) and sees the money
-    X recipient      ->  funds go to a one-time escrow wallet (Privy server wallet)
-                         -> recipient signs in with X -> server checks the X handle matches
-                         -> escrow sends the money to the recipient's new wallet
+    Registered user, or X account linked to a wallet
+        -> the sender signs a transfer -> funds go straight to that wallet
 
-Every payment is **verified on-chain by the server**, not trusted from the browser. The server fetches the transaction receipt and checks the token transfer log (sender, recipient and amount) before marking a payment `CONFIRMED`.
+    Email or X handle not on CashPay
+        -> funds go to a one-time escrow wallet (Privy server wallet)
+        -> the recipient signs in (email / Google / X). Privy verifies who they are
+        -> the server checks it matches the recipient and sends the funds to their new wallet
 
-## Security design
+    Nobody claims within 30 days
+        -> the escrow returns the funds to the sender (daily cron, or the sender taps
+           "Return money to my wallet")
 
-- Server-side authentication on every API route (Privy access token verified on the server).
-- Payments are verified from the Tempo receipt logs. Statuses: `SUBMITTED`, `CONFIRMED`, `FAILED`, `MISMATCH`.
-- Idempotent by transaction hash (and leg number for bulk payments), so a payment cannot be recorded twice.
-- X claims are protected by an **atomic claim lock**, so a claim can only be processed once. The X identity is verified by Privy OAuth, and the destination is the claimer's own embedded wallet.
-- No private keys or seed phrases are stored by CashPay. Secrets live in environment variables.
-- Input validation with Zod; users get friendly errors instead of raw blockchain errors.
+Every payment is **verified on-chain by the server**. A payment is only marked `CONFIRMED` after the server reads the Tempo transaction receipt and checks the token transfer log (sender, recipient, amount and token).
+
+## Security
+
+**Authentication and sessions**
+- Every API route verifies the Privy access token on the server. Nothing trusts the browser.
+- Identities used for claims (X account, email) are read from Privy after OAuth or email verification, never from the request body.
+
+**Keys and custody**
+- Users' embedded wallets are managed by Privy. CashPay never sees private keys or seed phrases.
+- Unclaimed payments sit in a one-time escrow wallet per payment (Privy server wallet, controlled by CashPay's server). Each payment has its own escrow, so payments are isolated from each other.
+
+**Payments**
+- Server-side verification from receipt logs. Statuses: `SUBMITTED`, `CONFIRMED`, `FAILED`, `MISMATCH`.
+- Idempotent by transaction hash and leg number, so a payment can't be recorded twice.
+- Network fees are paid in the stablecoin being sent; a small reserve (default $0.02) is kept for claim and refund transactions.
+
+**Claims, expiry and refunds**
+- Atomic database locks (`CLAIMING`, `REFUNDING`) make double claims and double refunds impossible.
+- Claim and refund transactions are verified on-chain before they are marked done.
+- Claims need a verified match with the recipient (X account or email). Expired links are rejected.
+- Refunds go only to the sender's own wallet. The daily cron is protected by `CRON_SECRET`.
+
+**Input, data and content**
+- All inputs are validated (Zod). SQL uses parameterized queries.
+- User text in emails is HTML-escaped. Profile photos are re-encoded to a small JPEG in the browser, validated on the server (type, size, JPEG signature) and served with `nosniff`.
+- Secrets live only in environment variables. `.env` files are git-ignored.
+- Claim pages are public to anyone who has the (unguessable) link and show the amount, sender and message.
+
+**Known limitations**
+- Escrow funds are custodial until claimed or returned. If `PRIVY_APP_SECRET` leaked, escrow funds would be at risk. Keep the secret safe and rotate it if in doubt.
+- No external security audit and no automated test suite yet.
+- X claims match the X username that Privy verified (the permanent X user id is used when it is known). A handle that changes hands could be claimed by the new owner; the 30 day expiry limits this.
+- Rate limiting is minimal (escrow creation is capped per user per day).
+- Email payments sent before escrow was introduced were delivered directly to a pre-generated wallet and have no expiry.
+- Emails sent from a new Gmail account may land in spam. A custom domain with Resend is the production fix.
+
+## What's new
+
+- Unclaimed email and X payments **expire after 30 days and return to the sender**, with a daily cron and a manual button.
+- Email payments now use escrow, and the recipient can claim with **email code or Google**.
+- **Link X account** in Profile: tips to your @handle go straight to your wallet.
+- **Wallet page** (balances, receive address, full history including deposits from other wallets), **Profile page** with photo, and mobile bottom navigation (Home, Wallet, Profile).
+- **Notifications** with "Mark all as read". **Refresh** buttons that force fresh data.
+- **Max** button in Send, Tips and Bulk Send. Bulk Send batch share page with one card for everyone tagged.
+- **USDT, USDC, OUSD and pathUSD** support, six languages, About CashPay window.
+- Branded claim emails with an embedded banner and an X button; new domain https://www.cashpayt.xyz.
 
 ## Tech stack
 
 - Next.js 15 (App Router), React 19, TypeScript
-- Privy v3 (embedded wallets, login, server wallets via `@privy-io/node`)
+- Privy v3 (embedded wallets, login, linking, server wallets via `@privy-io/node`)
 - Tempo mainnet (chain id 4217), viem
 - Neon (serverless PostgreSQL)
-- Nodemailer (Gmail SMTP) or Resend for claim emails
-- Deployed on Vercel
+- Nodemailer (Gmail SMTP) or Resend for emails
+- Vercel hosting and Vercel Cron
 
 ## Run it yourself
 
 1. Create a Privy app (enable Google, Email, X and Wallet logins; add your domain to allowed origins).
-2. Create a Neon PostgreSQL database and run the SQL below.
-3. Set the environment variables, then deploy to Vercel or run `npm install && npm run dev`.
+2. Create a Neon database and run the SQL below.
+3. Set the environment variables, deploy to Vercel (the daily refund cron is configured in `vercel.json`).
 
 ### Environment variables
 
     NEXT_PUBLIC_PRIVY_APP_ID    Privy app id (public)
     PRIVY_APP_SECRET            Privy app secret (secret)
     DATABASE_URL                Neon connection string (secret)
-    GMAIL_USER                  Gmail address used to send claim emails
+    CRON_SECRET                 random string protecting the refund cron (secret)
+    GMAIL_USER                  Gmail address used to send emails
     GMAIL_APP_PASSWORD          Gmail app password (secret)
-    RESEND_API_KEY              optional, alternative email provider
-    EMAIL_FROM                  optional, sender for Resend
-    CLAIM_FEE_RESERVE           optional, network fee reserve kept on X claims (default 0.02)
-    TEMPO_RPC_URL               optional, default https://rpc.tempo.xyz
-    TEMPO_EXPLORER_URL          optional, default https://explore.mainnet.tempo.xyz
-    NEXT_PUBLIC_TEMPO_CHAIN_ID  optional, default 4217
+    RESEND_API_KEY              optional, own-domain email (secret)
+    EMAIL_FROM                  optional, e.g. CashPay <noreply@yourdomain>
+    APP_URL                     optional, base URL used in emails
+    CLAIM_FEE_RESERVE           optional, fee reserve kept on claims/refunds (default 0.02)
+    NEXT_PUBLIC_CLAIM_DAYS      optional, days shown in the app (default 30, keep in sync with the SQL trigger)
+    NEXT_PUBLIC_SITE_URL        optional, default https://www.cashpayt.xyz (Share on X links)
 
 ### Database schema
 
@@ -94,9 +127,13 @@ Every payment is **verified on-chain by the server**, not trusted from the brows
       bio text,
       wallet_address text,
       status text not null default 'active',
+      x_id text,
+      x_username text,
+      notifications_read_at timestamptz,
       created_at timestamptz not null default now()
     );
     create unique index users_username_lower on users (lower(username));
+    create unique index users_x_id_unique on users (x_id) where x_id is not null;
 
     create table escrows (
       id uuid primary key default gen_random_uuid(),
@@ -104,6 +141,10 @@ Every payment is **verified on-chain by the server**, not trusted from the brows
       handle text not null,
       wallet_id text not null,
       address text not null,
+      email text,
+      x_id text,
+      x_name text,
+      x_avatar text,
       created_at timestamptz not null default now()
     );
 
@@ -128,6 +169,10 @@ Every payment is **verified on-chain by the server**, not trusted from the brows
       claim_amount numeric(20,6),
       claimed_by text,
       claimed_at timestamptz,
+      expires_at timestamptz,
+      refund_tx text,
+      refund_amount numeric(20,6),
+      refunded_at timestamptz,
       created_at timestamptz not null default now(),
       confirmed_at timestamptz
     );
@@ -135,34 +180,31 @@ Every payment is **verified on-chain by the server**, not trusted from the brows
     create index payments_sender on payments (sender_id, created_at desc);
     create index payments_recipient on payments (recipient_user_id, created_at desc);
 
+    create or replace function cashpay_set_expiry() returns trigger as $$
+    begin
+      if new.escrow_id is not null and new.expires_at is null then
+        new.expires_at := now() + interval '30 days';
+      end if;
+      return new;
+    end;
+    $$ language plpgsql;
+    create trigger cashpay_set_expiry before insert on payments
+      for each row execute function cashpay_set_expiry();
+
 ## Project structure
 
     app/
-      page.tsx               landing page
-      login/                 sign in
-      dashboard/             overview, balance chart, recent transactions
-      send/ and send/bulk/   send money, bulk send
-      tips/                  tip a user or an X handle
-      activity/              transaction history and receipts
-      claim/[id]/            claim links (email and X) and share preview image
-      u/[username]/          public profile
-      settings/              profile, wallet, language
-      api/                   server routes (payments, claim, recipients, balance, ...)
-    lib/                     db, auth, tempo helpers, email, i18n
+      page.tsx                landing page
+      dashboard/ wallet/ profile/ activity/ settings/   signed-in pages
+      send/ send/bulk/ tips/  sending money
+      claim/[id]/ batch/[hash]/   claim links and batch share pages
+      u/[username]/           public profile
+      api/                    server routes (payments, claim, refund, cron, notifications, ...)
+    lib/                      db, auth, Tempo helpers, escrow, refund, email, i18n
 
-## Try it in 3 minutes
+## Roadmap
 
-1. Sign in with Google and choose a username.
-2. Send a few cents to a friend by @username, then by email: open the claim link in another browser and sign in with that email.
-3. Tip an X handle that is not on CashPay, share the card on X, then claim it by signing in with that X account.
-4. Use Bulk Send to pay three people at once and note the single wallet confirmation.
-5. Open Transactions, tap a payment and screenshot the receipt.
-
-## Known limitations and roadmap
-
-- Unclaimed X tips stay in the escrow wallet. **Expiry and automatic refund to the sender are not built yet.**
-- A small network fee reserve (default $0.02) is deducted from X claims.
-- No admin control center, reconciliation worker or automated tests yet.
-- Rate limiting is minimal (only escrow creation is capped).
-- Claim emails sent through a new Gmail account may land in spam until the sender builds reputation. A custom domain with Resend is the production fix.
-- Next: payment requests, notifications center, admin control center with audit logs, expiring claims with refunds.
+- Automated tests and an external security review.
+- Admin control center with audit logs and reconciliation.
+- Move from server escrow wallets to an on-chain claim escrow contract.
+- Payment requests and richer notifications.

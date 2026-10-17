@@ -50,15 +50,17 @@ export async function POST(req: Request) {
       if (!units || units <= BigInt(0)) return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
       let escrowId: string | null = null;
       let recipientX: string | null = null;
+      let escrowEmail: string | null = null;
       if (it.escrowId) {
-        const e = await sql`select created_by, handle, address from escrows where id = ${it.escrowId}`;
+        const e = await sql`select created_by, handle, address, email from escrows where id = ${it.escrowId}`;
         if (!e[0] || e[0].created_by !== userId || e[0].address !== to) {
           return NextResponse.json({ error: "Invalid recipient." }, { status: 400 });
         }
         escrowId = it.escrowId;
-        recipientX = e[0].handle;
+        recipientX = e[0].email ? null : e[0].handle;
+        escrowEmail = e[0].email ?? null;
       }
-      prepared.push({ i, to, amount, memo: it.memo || null, email: it.recipientEmail ?? null, escrowId, recipientX });
+      prepared.push({ i, to, amount, memo: it.memo || null, email: escrowEmail ?? it.recipientEmail ?? null, escrowId, recipientX });
     }
     for (const p of prepared) {
       const rec = await sql`select id from users where lower(wallet_address) = ${p.to}`;

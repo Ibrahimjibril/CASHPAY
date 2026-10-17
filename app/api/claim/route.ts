@@ -13,20 +13,30 @@ const Body = z.object({
   batch: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
 });
 
+const mask = (e: string) => {
+  const [u, d] = String(e).split("@");
+  return `${(u || "").slice(0, 1)}***@${d || ""}`;
+};
+
 export async function POST(req: Request) {
   const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 400 });
 
-  // The X account is the one Privy verified through OAuth (never taken from the browser)
+  // Identities below are the ones Privy verified (X OAuth, email OTP or Google), never values sent by the browser
   const pu: any = await getPrivy().getUser(userId);
   const xName = String(pu?.twitter?.username || "").toLowerCase();
   const xSub = String(pu?.twitter?.subject || "");
-  if (!xName && !xSub) return NextResponse.json({ error: "Please sign in with your X account to claim." }, { status: 403 });
+  const emails = new Set<string>();
+  const addEmail = (v: any) => { if (v) emails.add(String(v).toLowerCase()); };
+  addEmail(pu?.email?.address);
+  addEmail(pu?.google?.email);
+  for (const a of pu?.linkedAccounts || []) addEmail(a?.type === "email" ? a?.address : a?.email);
 
   let rid = parsed.data.id;
   if (!rid && parsed.data.batch) {
+    if (!xName && !xSub) return NextResponse.json({ error: "Please sign in with your X account to claim." }, { status: 403 });
     const found = await sql`
       select p.id from payments p join escrows e on e.id = p.escrow_id
       where p.tx_hash = ${parsed.data.batch.toLowerCase()}
@@ -40,21 +50,34 @@ export async function POST(req: Request) {
   const id: string = rid;
 
   const rows = await sql`
-    select p.amount, p.token, p.status, p.recipient_x, p.claim_status, p.claim_tx, p.claim_amount,
+    select p.amount, p.token, p.status, p.recipient_x, p.recipient_email, p.claim_status, p.claim_tx, p.claim_amount,
+           coalesce(p.expires_at, p.created_at + interval '30 days') as expires,
            e.wallet_id, e.address as escrow_address, e.x_id
     from payments p join escrows e on e.id = p.escrow_id
     where p.id = ${id}`;
   const p = rows[0];
   const tokenAddr = String(p?.token || "").toLowerCase();
-  if (!p || !p.recipient_x) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 404 });
+  if (!p) return NextResponse.json({ error: "This claim link isn't valid." }, { status: 404 });
   if (p.status !== "CONFIRMED") {
     return NextResponse.json({ error: "This payment is still being confirmed. Try again in a moment." }, { status: 409 });
   }
+  if (p.claim_status === "REFUNDED" || p.claim_status === "REFUNDING") {
+    return NextResponse.json({ error: "This claim link has expired. The money was returned to the sender.", expired: true }, { status: 410 });
+  }
 
-  // Ownership: bound to the permanent X user id when we have it (falls back to the handle for older tips)
-  const owner = p.x_id ? !!xSub && xSub === String(p.x_id) : xName === String(p.recipient_x).toLowerCase();
-  if (!owner) {
-    return NextResponse.json({ error: `This money was sent to @${p.recipient_x}. Please sign in with that X account.` }, { status: 403 });
+  // Ownership
+  if (p.recipient_x) {
+    if (!xName && !xSub) return NextResponse.json({ error: "Please sign in with your X account to claim." }, { status: 403 });
+    const owner = p.x_id ? !!xSub && xSub === String(p.x_id) : xName === String(p.recipient_x).toLowerCase();
+    if (!owner) {
+      return NextResponse.json({ error: `This money was sent to @${p.recipient_x}. Please sign in with that X account.` }, { status: 403 });
+    }
+  } else if (p.recipient_email) {
+    if (!emails.has(String(p.recipient_email).toLowerCase())) {
+      return NextResponse.json({ error: `This money was sent to ${mask(p.recipient_email)}. Please sign in with that email.`, mismatch: true }, { status: 403 });
+    }
+  } else {
+    return NextResponse.json({ error: "This claim link isn't valid." }, { status: 404 });
   }
 
   const emb = (pu.linkedAccounts || []).find((a: any) => a.type === "wallet" && a.walletClientType === "privy");
@@ -65,6 +88,11 @@ export async function POST(req: Request) {
 
   const received = (v: string) => formatUnits(parseUnits6(String(v)) ?? BigInt(0), 6, 2);
   if (p.claim_status === "CLAIMED") return NextResponse.json({ status: "CLAIMED", received: received(p.claim_amount ?? "0") });
+
+  // Expired (only blocks claims that have not started yet)
+  if (!p.claim_status && new Date(p.expires).getTime() < Date.now()) {
+    return NextResponse.json({ error: "This claim link has expired. The money is being returned to the sender.", expired: true }, { status: 410 });
+  }
 
   async function finalize(hash: string): Promise<"CLAIMED" | "FAILED" | "PENDING"> {
     for (let i = 0; i < 6; i++) {
@@ -84,7 +112,7 @@ export async function POST(req: Request) {
   async function result(s: "CLAIMED" | "FAILED" | "PENDING") {
     if (s === "CLAIMED") {
       const r = await sql`select claim_amount from payments where id = ${id}`;
-      if (xSub) {
+      if (xSub && p.recipient_x) {
         // Link the verified X account to this wallet (ignored if already linked elsewhere)
         try { await sql`update users set x_id = ${xSub}, x_username = ${xName || null} where id = ${userId} and x_id is null`; } catch {}
       }

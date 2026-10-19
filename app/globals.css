@@ -394,3 +394,8 @@ a.cp-stat{display:block}
 
 /* refresh buttons show they are working */
 .spin svg{animation:cp-rot .8s linear infinite}
+
+/* Back button (Send, Tips, Bulk Send) */
+.wrap.center{position:relative}
+.backbtn{position:absolute;top:14px;left:12px;z-index:5;display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 14px 0 8px;border-radius:12px;border:1.5px solid var(--brand);background:var(--soft);color:var(--brand);font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.backbtn:active{transform:scale(.97)}

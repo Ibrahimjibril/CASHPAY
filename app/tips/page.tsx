@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Loader from "@/app/components/Loader";
+import BackButton from "@/app/components/BackButton";
 import { maxSendable, parseUnits6 } from "@/lib/money";
 
 type Person = { username: string; display_name: string; wallet_address: string };
@@ -67,6 +68,7 @@ export default function Tips() {
   const label = picked ? `@${picked.username || picked.x}` : "";
   return (
     <main className="wrap center">
+      <BackButton />
       <a className="brand" href="/dashboard"><img src="/logo.svg" alt="" />CashPay</a>
       <h1 className="h-sm">Tip someone you appreciate</h1>
       <div className="form">

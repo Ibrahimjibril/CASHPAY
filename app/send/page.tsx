@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import Loader from "@/app/components/Loader";
+import BackButton from "@/app/components/BackButton";
 import TokenPicker from "@/app/components/TokenPicker";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
@@ -209,6 +210,7 @@ export default function Send() {
 
   return (
     <main className="wrap center">
+      <BackButton />
       <a className="brand" href="/dashboard"><img src="/logo.svg" alt="" />CashPay</a>
 
       {step === "done" && done && (

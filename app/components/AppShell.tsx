@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Icon from "./Icons";
+import PasskeyGate from "./PasskeyGate";
+import { REQUIRE_PASSKEY, hasPasskey } from "@/lib/passkey";
 import { Wave } from "./Charts";
 import { useI18n } from "@/lib/i18n";
 import AboutModal from "./AboutModal";
@@ -173,7 +175,7 @@ export default function AppShell({ children }: { children: ReactNode; badge?: nu
             </>
           )}
         </header>
-        <div className="cp-content">{children}</div>
+        <div className="cp-content">{REQUIRE_PASSKEY && user && !hasPasskey(user) ? <PasskeyGate required /> : children}</div>
         <nav className="cp-bottom" aria-label="Primary">
           <Link href="/dashboard" className={path === "/dashboard" ? "active" : ""}><Icon name="home" size={22} />{t("nav_home")}</Link>
           <Link href="/wallet" className={path === "/wallet" ? "active" : ""}><Icon name="wallet" size={22} />{t("nav_wallet")}</Link>

@@ -6,6 +6,8 @@ import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import Loader from "@/app/components/Loader";
 import BackButton from "@/app/components/BackButton";
 import TokenPicker from "@/app/components/TokenPicker";
+import PasskeyGate from "@/app/components/PasskeyGate";
+import { REQUIRE_PASSKEY, hasPasskey } from "@/lib/passkey";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
 import { toSite } from "@/lib/site";
@@ -22,7 +24,7 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const money = (u: bigint) => `${u / BigInt(1000000)}.${(u % BigInt(1000000)).toString().padStart(6, "0").slice(0, 2)}`;
 
 export default function BulkSend() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
+  const { ready, authenticated, getAccessToken, user } = usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
   const router = useRouter();
@@ -41,6 +43,7 @@ export default function BulkSend() {
   const [explorer, setExplorer] = useState("");
   const [copied, setCopied] = useState(-1);
   const [batchHash, setBatchHash] = useState("");
+  const [needKey, setNeedKey] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -69,6 +72,7 @@ export default function BulkSend() {
   }, [ready, authenticated]);
 
   async function prepare() {
+    if (REQUIRE_PASSKEY && !hasPasskey(user)) { setMsg(""); setNeedKey(true); return; }
     setMsg("");
     const out: { raw: string; amount: string }[] = [];
     const errs: string[] = [];
@@ -279,6 +283,7 @@ export default function BulkSend() {
               </div>
             </label>
             <label>Message (optional)<input value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={140} placeholder="Thanks, team!" /></label>
+            {needKey && !hasPasskey(user) && <PasskeyGate />}
             {msg && <p className="small" style={{ whiteSpace: "pre-line" }}>{msg}</p>}
             <button className="btn primary" onClick={prepare}>Continue</button>
           </div>

@@ -6,6 +6,8 @@ import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import Loader from "@/app/components/Loader";
 import BackButton from "@/app/components/BackButton";
 import TokenPicker from "@/app/components/TokenPicker";
+import PasskeyGate from "@/app/components/PasskeyGate";
+import { REQUIRE_PASSKEY, hasPasskey } from "@/lib/passkey";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
 import { toSite, CLAIM_DAYS } from "@/lib/site";
@@ -20,7 +22,7 @@ const HANDLE = /^@[a-zA-Z0-9_]{1,15}$/;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export default function Send() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
+  const { ready, authenticated, getAccessToken, user } = usePrivy();
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
   const router = useRouter();
@@ -39,6 +41,7 @@ export default function Send() {
   const [copied, setCopied] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
   const [prefilled, setPrefilled] = useState(false);
+  const [needKey, setNeedKey] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -137,6 +140,7 @@ export default function Send() {
   }
 
   function review() {
+    if (REQUIRE_PASSKEY && !hasPasskey(user)) { setMsg(""); setNeedKey(true); return; }
     setMsg("");
     const units = parseUnits6(amount);
     if (!to) return setMsg("Choose who you want to pay.");
@@ -303,6 +307,7 @@ export default function Send() {
               {QUICK.map((v) => <button key={v} className="chip" onClick={() => setAmount(v)}>${v}</button>)}
             </div>
             <label>Message (optional)<input value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={140} placeholder="Thanks for helping me!" /></label>
+            {needKey && !hasPasskey(user) && <PasskeyGate />}
             {msg && <p className="small">{msg}</p>}
             <button className="btn primary" onClick={review}>Continue</button>
           </div>

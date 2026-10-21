@@ -2,11 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePrivy, useLinkAccount } from "@privy-io/react-auth";
+import { usePrivy, useLinkAccount, useMfaEnrollment, useLinkWithPasskey } from "@privy-io/react-auth";
 import AppShell from "../components/AppShell";
 import Loader from "../components/Loader";
 import Avatar from "../components/Avatar";
 import { shortAddr } from "@/lib/ui";
+import { hasPasskey } from "@/lib/passkey";
 
 type Profile = { username: string; display_name: string; bio: string | null; wallet_address: string | null };
 
@@ -49,6 +50,30 @@ export default function ProfilePage() {
   const [xl, setXl] = useState("");
   const [xmsg, setXmsg] = useState("");
   const [xbusy, setXbusy] = useState(false);
+  const { showMfaEnrollmentModal } = useMfaEnrollment();
+  const lp: any = useLinkWithPasskey();
+  const mfaOn = hasPasskey(user);
+  const [pmsg, setPmsg] = useState("");
+
+  async function protect() {
+    setPmsg("");
+    try {
+      await showMfaEnrollmentModal();
+    } catch {
+      setPmsg("We couldn't open the fingerprint setup. Passkeys must be enabled for this app (Privy dashboard), and your device must support them.");
+    }
+  }
+
+  async function linkPk() {
+    setPmsg("");
+    try {
+      if (lp.linkWithPasskey) await lp.linkWithPasskey();
+      else await lp.initPasskey();
+      setPmsg("✓ Passkey added. You can now sign in with it.");
+    } catch {
+      setPmsg("We couldn't add the passkey. Please try again.");
+    }
+  }
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -204,6 +229,23 @@ export default function ProfilePage() {
           </div>
           {msg && <p className="cp-muted" style={{ margin: 0, fontSize: 13 }}>{msg}</p>}
         </div>
+      </div>
+      <div className="cp-panel" style={{ marginTop: 14 }}>
+        <div className="cp-ph"><h2>Security</h2></div>
+        {mfaOn ? (
+          <p style={{ margin: 0 }}>✓ <b>Fingerprint protection is ON.</b> Your wallet asks for your fingerprint, face or screen lock before money can leave it.</p>
+        ) : (
+          <>
+            <p className="cp-muted" style={{ marginTop: 0 }}>Protect your money with your fingerprint, face or screen lock (passkey). Once it is on, your wallet asks for it before a payment is signed.</p>
+            <button className="cp-btn primary" onClick={protect}>Set up fingerprint protection</button>
+          </>
+        )}
+        <div style={{ marginTop: 14 }}>
+          <p className="cp-muted" style={{ margin: "0 0 8px", fontSize: 13 }}>Want to sign in with your fingerprint too? Add a passkey to your account.</p>
+          <button className="cp-btn" onClick={linkPk}>Add a passkey for sign-in</button>
+        </div>
+        {pmsg && <p className="cp-muted" style={{ fontSize: 13, marginBottom: 0 }}>{pmsg}</p>}
+        <p className="cp-muted" style={{ fontSize: 12, marginBottom: 0 }}>After you confirm once, the same device stays unlocked for about 15 minutes.</p>
       </div>
     </AppShell>
   );

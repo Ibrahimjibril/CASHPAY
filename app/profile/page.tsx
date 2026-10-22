@@ -2,12 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePrivy, useLinkAccount, useMfaEnrollment, useLinkWithPasskey } from "@privy-io/react-auth";
+import { usePrivy, useLinkAccount } from "@privy-io/react-auth";
 import AppShell from "../components/AppShell";
 import Loader from "../components/Loader";
 import Avatar from "../components/Avatar";
+import { usePasskey } from "../components/PasskeyProvider";
+import { REQUIRE_PASSKEY } from "@/lib/passkey";
 import { shortAddr } from "@/lib/ui";
-import { hasPasskey } from "@/lib/passkey";
 
 type Profile = { username: string; display_name: string; bio: string | null; wallet_address: string | null };
 
@@ -38,6 +39,7 @@ async function toJpeg(file: File): Promise<string> {
 
 export default function ProfilePage() {
   const { ready, authenticated, getAccessToken, user } = usePrivy();
+  const pk = usePasskey();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const tried = useRef(false);
@@ -50,30 +52,8 @@ export default function ProfilePage() {
   const [xl, setXl] = useState("");
   const [xmsg, setXmsg] = useState("");
   const [xbusy, setXbusy] = useState(false);
-  const { showMfaEnrollmentModal } = useMfaEnrollment();
-  const lp: any = useLinkWithPasskey();
-  const mfaOn = hasPasskey(user);
   const [pmsg, setPmsg] = useState("");
-
-  async function protect() {
-    setPmsg("");
-    try {
-      await showMfaEnrollmentModal();
-    } catch {
-      setPmsg("We couldn't open the fingerprint setup. Passkeys must be enabled for this app (Privy dashboard), and your device must support them.");
-    }
-  }
-
-  async function linkPk() {
-    setPmsg("");
-    try {
-      if (lp.linkWithPasskey) await lp.linkWithPasskey();
-      else await lp.initPasskey();
-      setPmsg("✓ Passkey added. You can now sign in with it.");
-    } catch {
-      setPmsg("We couldn't add the passkey. Please try again.");
-    }
-  }
+  const [pbusy, setPbusy] = useState(false);
 
   async function api(path: string, init?: RequestInit) {
     const token = await getAccessToken();
@@ -117,7 +97,6 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
 
-  // Shows the linked X account; if the login already has X (e.g. right after coming back from X), saves it
   useEffect(() => {
     if (!ready || !authenticated) return;
     api("/api/profile/sync-x").then((r) => r.json()).then((d) => {
@@ -171,6 +150,22 @@ export default function ProfilePage() {
     setBusy(false);
   }
 
+  async function turnOn() {
+    setPbusy(true);
+    setPmsg("");
+    const e = await pk.enroll();
+    setPmsg(e || "✓ Fingerprint lock is ON.");
+    setPbusy(false);
+  }
+
+  async function turnOff() {
+    setPbusy(true);
+    setPmsg("");
+    const e = await pk.remove();
+    setPmsg(e || "Fingerprint lock turned off.");
+    setPbusy(false);
+  }
+
   if (!ready || !authenticated || !p) return <Loader />;
 
   return (
@@ -193,6 +188,28 @@ export default function ProfilePage() {
           <button className="cp-btn primary" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? "Please wait…" : "Change photo"}</button>
           <button className="cp-btn ghost" disabled={busy} onClick={removePhoto}>Remove photo</button>
         </div>
+      </div>
+
+      <div className="cp-panel" style={{ marginTop: 14 }}>
+        <div className="cp-ph"><h2>Security</h2></div>
+        {pk.status === "enrolled" ? (
+          <>
+            <p style={{ margin: 0 }}>✓ <b>Fingerprint lock is ON.</b> CashPay asks for your fingerprint, face or screen lock every time you open the app and before every payment.</p>
+            {!REQUIRE_PASSKEY && (
+              <div style={{ marginTop: 12 }}>
+                <button className="cp-btn ghost" disabled={pbusy} onClick={turnOff}>{pbusy ? "Please wait…" : "Turn off fingerprint lock"}</button>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="cp-muted" style={{ marginTop: 0 }}>
+              Lock CashPay with your fingerprint, face or screen lock (a passkey). It will be asked every time you open the app and before every payment.
+            </p>
+            <button className="cp-btn primary" disabled={pbusy} onClick={turnOn}>{pbusy ? "Please wait…" : "Set up fingerprint lock"}</button>
+          </>
+        )}
+        {pmsg && <p className="cp-muted" style={{ fontSize: 13, marginBottom: 0 }}>{pmsg}</p>}
       </div>
 
       <div className="cp-panel" style={{ marginTop: 14 }}>
@@ -229,23 +246,6 @@ export default function ProfilePage() {
           </div>
           {msg && <p className="cp-muted" style={{ margin: 0, fontSize: 13 }}>{msg}</p>}
         </div>
-      </div>
-      <div className="cp-panel" style={{ marginTop: 14 }}>
-        <div className="cp-ph"><h2>Security</h2></div>
-        {mfaOn ? (
-          <p style={{ margin: 0 }}>✓ <b>Fingerprint protection is ON.</b> Your wallet asks for your fingerprint, face or screen lock before money can leave it.</p>
-        ) : (
-          <>
-            <p className="cp-muted" style={{ marginTop: 0 }}>Protect your money with your fingerprint, face or screen lock (passkey). Once it is on, your wallet asks for it before a payment is signed.</p>
-            <button className="cp-btn primary" onClick={protect}>Set up fingerprint protection</button>
-          </>
-        )}
-        <div style={{ marginTop: 14 }}>
-          <p className="cp-muted" style={{ margin: "0 0 8px", fontSize: 13 }}>Want to sign in with your fingerprint too? Add a passkey to your account.</p>
-          <button className="cp-btn" onClick={linkPk}>Add a passkey for sign-in</button>
-        </div>
-        {pmsg && <p className="cp-muted" style={{ fontSize: 13, marginBottom: 0 }}>{pmsg}</p>}
-        <p className="cp-muted" style={{ fontSize: 12, marginBottom: 0 }}>After you confirm once, the same device stays unlocked for about 15 minutes.</p>
       </div>
     </AppShell>
   );

@@ -26,7 +26,7 @@ Out of scope: Privy, Tempo, Vercel, Neon and other third-party services (report 
 - Atomic database locks prevent double claims and double refunds.
 - Claims require a Privy-verified match with the recipient (X account or email).
 - Unclaimed escrow payments expire after 30 days and return to the sender.
-- Optional passkey (fingerprint) protection for wallet signing, through Privy MFA.
+- Optional fingerprint (passkey) lock: asked every time the app is opened and before every payment (WebAuthn, verified on the server).
 
 ## Known risks
 

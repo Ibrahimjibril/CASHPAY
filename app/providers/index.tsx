@@ -5,6 +5,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { defineChain } from "viem";
 import * as viemChains from "viem/chains";
 import { I18nProvider } from "@/lib/i18n";
+import PasskeyProvider from "@/app/components/PasskeyProvider";
 
 const tempoChain: any =
   (viemChains as any).tempo ??
@@ -51,7 +52,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <PrivyProvider appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!} config={config}>
       <I18nProvider>
         <FastLinks />
-        {children}
+        <PasskeyProvider>{children}</PasskeyProvider>
       </I18nProvider>
     </PrivyProvider>
   );

@@ -71,12 +71,14 @@ Every payment is **verified on-chain by the server**. A payment is only marked `
                                             the 30 day expiry; roadmap below
     Custom smart contract bugs              No custom contract holds funds today                         Not applicable
 
-### Passkey (fingerprint) protection
+### Fingerprint lock (passkey)
 
-- In **Profile -> Security** a user can turn on fingerprint, face or screen-lock protection (a passkey, through Privy MFA). Once enrolled, Privy asks for it when the wallet signs a payment. After one confirmation the same device stays unlocked for about 15 minutes (Privy behaviour).
-- Setting `NEXT_PUBLIC_REQUIRE_PASSKEY=1` makes the app refuse to start a payment until the user has enrolled. This check is in the UI; the protection itself is enforced by Privy for enrolled accounts.
-- Users can also add a passkey to sign in with it (**Profile -> Security -> Add a passkey for sign-in**).
-- Passkeys are tied to the site domain, so use https://www.cashpayt.xyz.
+- In **Profile -> Security** a user can turn on the CashPay fingerprint lock (WebAuthn passkey: fingerprint, face or screen lock). Public keys are stored in the `passkeys` table; every challenge is one-time and every assertion is verified on the server (`@simplewebauthn/server`, user verification required).
+- With the lock on, the app **locks every time it is opened or returns from the background** (default 15 seconds, `NEXT_PUBLIC_LOCK_AFTER_SECONDS`), and **every payment (Send, Tips, Bulk Send) asks for the fingerprint first**, whatever the amount. There is no "unlocked for 15 minutes" window.
+- `NEXT_PUBLIC_REQUIRE_PASSKEY=1` makes the fingerprint lock mandatory for everyone who signs in (claim, public and login pages stay open so recipients can claim money).
+- Turning the lock off needs a fingerprint check first. If a user loses their device, "I can't use my fingerprint" signs them out; after a fresh sign-in with email, Google or X the lock is reset and can be set up again. This recovery path is weaker than the fingerprint itself, by design, so nobody is locked out forever.
+- **Limitation:** the payment confirmation is enforced by the CashPay app, not by the wallet. Payments are signed by the user's Privy embedded wallet in the browser, so a technical attacker who already controls an unlocked session could bypass the app UI. The lock protects against someone who simply has the user's unlocked phone. Server-enforced wallet policies are on the roadmap.
+- Passkeys are tied to the domain `cashpayt.xyz` (they work on www and non-www).
 
 ### Known limitations (we want to be upfront)
 
@@ -134,7 +136,8 @@ Every payment is **verified on-chain by the server**. A payment is only marked `
     CLAIM_FEE_RESERVE              optional, fee reserve kept on claims and refunds (default 0.02)
     NEXT_PUBLIC_CLAIM_DAYS         optional, days shown in the app (default 30, keep in sync with the SQL trigger)
     NEXT_PUBLIC_SITE_URL           optional, default https://www.cashpayt.xyz (Share on X links)
-    NEXT_PUBLIC_REQUIRE_PASSKEY    optional, set to 1 to require passkey protection before sending
+    NEXT_PUBLIC_REQUIRE_PASSKEY    optional, set to 1 to make the fingerprint lock mandatory
+    NEXT_PUBLIC_LOCK_AFTER_SECONDS optional, seconds in the background before the app locks (default 15)
 
 ### Database schema
 
@@ -210,6 +213,26 @@ Every payment is **verified on-chain by the server**. A payment is only marked `
     $$ language plpgsql;
     create trigger cashpay_set_expiry before insert on payments
       for each row execute function cashpay_set_expiry();
+
+### Passkey tables
+
+    create table passkeys (
+      id text primary key,
+      user_id text not null references users(id),
+      public_key text not null,
+      counter bigint not null default 0,
+      transports text,
+      label text,
+      created_at timestamptz not null default now(),
+      last_used_at timestamptz
+    );
+    create table passkey_challenges (
+      id uuid primary key default gen_random_uuid(),
+      user_id text not null,
+      challenge text not null,
+      purpose text not null,
+      created_at timestamptz not null default now()
+    );
 
 ## Project structure
 

@@ -402,3 +402,8 @@ a.cp-stat{display:block}
 
 /* Required passkey screen */
 .gate{max-width:460px;margin:40px auto;padding:28px 22px;border:1px solid var(--line);border-radius:22px;background:var(--panel,var(--card));display:grid;gap:14px;justify-items:center}
+
+/* Fingerprint lock screen */
+.lock{position:fixed;inset:0;z-index:300;background:#08110f;color:#eaf2f8;display:grid;place-items:center;padding:24px;text-align:center}
+.lock .box{max-width:420px;display:grid;gap:14px;justify-items:center}
+.lock h1{font-size:26px;letter-spacing:-.02em}

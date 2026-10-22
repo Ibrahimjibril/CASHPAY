@@ -6,6 +6,7 @@ import { useSendTransaction } from "@privy-io/react-auth/tempo";
 import Loader from "@/app/components/Loader";
 import BackButton from "@/app/components/BackButton";
 import TokenPicker from "@/app/components/TokenPicker";
+import { usePasskey } from "@/app/components/PasskeyProvider";
 import PasskeyGate from "@/app/components/PasskeyGate";
 import { REQUIRE_PASSKEY, hasPasskey } from "@/lib/passkey";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
@@ -28,6 +29,7 @@ export default function BulkSend() {
   const { wallets } = useWallets();
   const { sendTransaction } = useSendTransaction();
   const router = useRouter();
+  const passkey = usePasskey();
 
   const [me, setMe] = useState<{ wallet_address: string | null } | null>(null);
   const [bals, setBals] = useState<Record<string, string>>({});
@@ -134,6 +136,7 @@ export default function BulkSend() {
   }
 
   async function confirm() {
+    if (!(await passkey.confirmTx())) { setMsg("Fingerprint confirmation is needed to send money."); return; }
     setStep("sending");
     setMsg("");
     let hash = "";

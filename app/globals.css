@@ -407,3 +407,26 @@ a.cp-stat{display:block}
 .lock{position:fixed;inset:0;z-index:300;background:#08110f;color:#eaf2f8;display:grid;place-items:center;padding:24px;text-align:center}
 .lock .box{max-width:420px;display:grid;gap:14px;justify-items:center}
 .lock h1{font-size:26px;letter-spacing:-.02em}
+
+/* Bulk send: recipient cards */
+.bk-sum{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border:1px solid var(--line);background:var(--card);border-radius:16px}
+.bk-sum .l{display:flex;align-items:center;gap:10px;font-weight:700}
+.bk-sum .l svg{color:#f59e0b}
+.bk-sum b.t{color:var(--brand)}
+.bk-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bk-tools input{flex:1;min-width:120px}
+.bk-card{border:1px solid var(--line);border-radius:20px;background:var(--card);padding:14px;display:grid;gap:10px;text-align:left}
+.bk-card.bad{border-color:#ef4444}
+.bk-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;color:var(--muted)}
+.bk-del{background:transparent;border:0;color:#ef4444;cursor:pointer;padding:6px;display:grid}
+.bk-in{width:100%}
+.bk-two{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.bk-amt{display:flex;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--card);padding-left:12px;min-width:0}
+.bk-amt input{border:0;background:transparent;min-height:46px;padding:0 10px 0 4px;width:100%;min-width:0}
+.bk-chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;width:fit-content}
+.bk-chip.ok{background:rgba(25,227,165,.14);color:var(--brand)}
+.bk-chip.info{background:rgba(59,130,246,.14);color:#3b82f6}
+.bk-chip.mute{background:rgba(139,162,182,.16);color:var(--muted)}
+.bk-err{color:#ef4444;font-size:13px}
+.bk-add{border:2px dashed var(--line);border-radius:18px;background:transparent;color:var(--muted);font:inherit;font-weight:600;min-height:56px;cursor:pointer;width:100%}
+.bk-bar{position:sticky;bottom:10px;z-index:4}

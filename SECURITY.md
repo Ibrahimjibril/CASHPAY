@@ -7,7 +7,7 @@ CashPay is a public alpha running on Tempo mainnet with real funds. Please test 
 Please report privately and do not open a public issue:
 
 - Use GitHub: **Security -> Report a vulnerability** on this repository, or
-- Send a direct message to https://x.com/CashPay_
+- Send a direct message to [@CashPay_](https://x.com/CashPay_)
 
 Include steps to reproduce and the impact. We will acknowledge your report, fix confirmed issues and credit you if you wish. Please do not access other people's funds or data while testing.
 

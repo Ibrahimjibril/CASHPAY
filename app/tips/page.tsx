@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import Loader from "@/app/components/Loader";
 import BackButton from "@/app/components/BackButton";
+import TokenPicker from "@/app/components/TokenPicker";
 import { maxSendable, parseUnits6 } from "@/lib/money";
 
 type Person = { username: string; display_name: string; wallet_address: string };
@@ -19,7 +20,8 @@ export default function Tips() {
   const [picked, setPicked] = useState<Picked | null>(null);
   const [amount, setAmount] = useState("5");
   const [searched, setSearched] = useState(false);
-  const [maxBal, setMaxBal] = useState("0");
+  const [bals, setBals] = useState<Record<string, string>>({});
+  const [tok, setTok] = useState("OUSD");
 
   async function api(path: string) {
     const token = await getAccessToken();
@@ -33,10 +35,16 @@ export default function Tips() {
   useEffect(() => {
     if (!ready || !authenticated) return;
     api("/api/balance").then((r) => r.json()).then((d) => {
-      let best = BigInt(0);
-      let bs = "0";
-      for (const x of d.tokens || []) { const u = parseUnits6(x.balance) ?? BigInt(0); if (u > best) { best = u; bs = x.balance; } }
-      setMaxBal(bs);
+      const m: Record<string, string> = {};
+      let best = "OUSD";
+      let hi = BigInt(-1);
+      for (const x of d.tokens || []) {
+        m[x.symbol] = x.balance;
+        const u = parseUnits6(x.balance) ?? BigInt(0);
+        if (u > hi) { hi = u; best = x.symbol; }
+      }
+      setBals(m);
+      setTok(best);
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);
@@ -59,8 +67,9 @@ export default function Tips() {
     if (!picked) return;
     const memo = encodeURIComponent("Tip 💸");
     const amt = encodeURIComponent(amount);
-    if (picked.username) router.push(`/send?u=${encodeURIComponent(picked.username)}&amount=${amt}&memo=${memo}`);
-    else if (picked.x) router.push(`/send?x=${encodeURIComponent(picked.x)}&amount=${amt}&memo=${memo}`);
+    const tk = encodeURIComponent(tok);
+    if (picked.username) router.push(`/send?u=${encodeURIComponent(picked.username)}&amount=${amt}&memo=${memo}&token=${tk}`);
+    else if (picked.x) router.push(`/send?x=${encodeURIComponent(picked.x)}&amount=${amt}&memo=${memo}&token=${tk}`);
   }
 
   if (!ready || !authenticated) return <Loader />;
@@ -72,6 +81,7 @@ export default function Tips() {
       <a className="brand" href="/dashboard"><img src="/logo.svg" alt="" />CashPay</a>
       <h1 className="h-sm">Tip someone you appreciate</h1>
       <div className="form">
+        <TokenPicker value={tok} onChange={setTok} balances={bals} />
         {picked ? (
           <div className="card">
             <b>{label}</b> <span className="small">{picked.display_name ? `· ${picked.display_name}` : "· X account (straight to their wallet if linked, otherwise they claim with X)"}</span>
@@ -95,13 +105,13 @@ export default function Tips() {
         <label>Amount ($)
           <div className="amtrow">
             <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <button type="button" className="maxbtn" onClick={() => setAmount(maxSendable(maxBal))}>Max</button>
+            <button type="button" className="maxbtn" onClick={() => setAmount(maxSendable(bals[tok] || "0"))}>Max</button>
           </div>
         </label>
         <div className="chips" style={{ marginTop: 0 }}>
           {PRESETS.map((v) => <button key={v} className="chip" onClick={() => setAmount(v)}>${v}</button>)}
         </div>
-        <button className="btn primary" disabled={!picked || !amount} onClick={go}>Send tip</button>
+        <button className="btn primary" disabled={!picked || !amount} onClick={go}>Send tip in {tok}</button>
       </div>
     </main>
   );

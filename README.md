@@ -5,7 +5,7 @@
 CashPay is a stablecoin payments app built on **Tempo mainnet**. Pay anyone with a **@username**, an **email address**, an **X handle** or a **wallet address**. The person you pay does not need a wallet or any crypto knowledge: they sign in and the money is theirs. If they never claim it, it returns to you.
 
 - Live app: https://www.cashpayt.xyz
-- X: https://x.com/CashPay_
+- X: [@CashPay_](https://x.com/CashPay_)
 - Security policy: see `SECURITY.md`
 
 > Status: public alpha on Tempo mainnet with real funds. Use small amounts while testing.

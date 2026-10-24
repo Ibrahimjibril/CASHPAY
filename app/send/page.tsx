@@ -86,7 +86,8 @@ export default function Send() {
         if (u > hi) { hi = u; best = x.symbol; }
       }
       setBals(m);
-      setTok(best);
+      const want = new URLSearchParams(window.location.search).get("token")?.toUpperCase();
+      setTok(want && tokenBySymbol(want) ? want : best);
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated]);

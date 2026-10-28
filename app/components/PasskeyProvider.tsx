@@ -2,10 +2,11 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
-import { REQUIRE_PASSKEY, LOCK_AFTER_MS } from "@/lib/passkey";
+import { startAuthentication, startRegistration, browserSupportsWebAuthn, platformAuthenticatorIsAvailable } from "@simplewebauthn/browser";
+import { REQUIRE_PASSKEY, ALLOW_SKIP_PASSKEY, LOCK_AFTER_MS } from "@/lib/passkey";
 
 type Status = "unknown" | "none" | "enrolled";
+type Support = "unknown" | "yes" | "no";
 type Ctx = {
   status: Status;
   confirmTx: () => Promise<boolean>;
@@ -20,9 +21,13 @@ const isPublic = (p: string) => p === "/" || p.startsWith("/login") || p.startsW
 function friendly(e: any): string {
   const n = String(e?.name || "");
   const m = String(e?.message || "");
-  if (n === "NotAllowedError" || /cancel|timed out|not allowed/i.test(m)) return "Fingerprint was cancelled or timed out. Please try again.";
+  if (n === "NotAllowedError" || /cancel|timed out|not allowed/i.test(m)) {
+    return "Fingerprint was cancelled or timed out. If you didn't cancel it, your browser may not support passkeys: please open CashPay in Chrome, Samsung Internet or Safari, and make sure your phone has a screen lock.";
+  }
   if (n === "InvalidStateError") return "This device already has a CashPay fingerprint.";
-  if (n === "NotSupportedError" || /not supported/i.test(m)) return "This device or browser doesn't support passkeys.";
+  if (n === "NotSupportedError" || /not supported/i.test(m)) {
+    return "This browser or device doesn't support passkeys. Please open CashPay in Chrome, Samsung Internet or Safari.";
+  }
   return "We couldn't verify your fingerprint. Please try again.";
 }
 
@@ -30,19 +35,37 @@ export default function PasskeyProvider({ children }: { children: ReactNode }) {
   const { ready, authenticated, getAccessToken, logout } = usePrivy();
   const path = usePathname() || "/";
   const [status, setStatus] = useState<Status>("unknown");
+  const [support, setSupport] = useState<Support>("unknown");
+  const [skipped, setSkipped] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [locked, setLocked] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const statusRef = useRef<Status>("unknown");
+  const skippedRef = useRef(false);
   const hiddenAt = useRef(0);
   const autoTried = useRef(false);
   const tokRef = useRef(getAccessToken);
   tokRef.current = getAccessToken;
   statusRef.current = status;
+  skippedRef.current = skipped;
 
   const headers = useCallback(async () => {
     const token = await tokRef.current();
     return { "content-type": "application/json", authorization: `Bearer ${token}` } as Record<string, string>;
+  }, []);
+
+  // does this browser/device support passkeys at all?
+  useEffect(() => {
+    (async () => {
+      try {
+        const ok = browserSupportsWebAuthn() && (await platformAuthenticatorIsAvailable());
+        setSupport(ok ? "yes" : "no");
+      } catch {
+        setSupport("no");
+      }
+      try { if (sessionStorage.getItem("cp-pk-skip") === "1") setSkipped(true); } catch {}
+    })();
   }, []);
 
   // who is signed in, and do they have a fingerprint lock?
@@ -105,7 +128,7 @@ export default function PasskeyProvider({ children }: { children: ReactNode }) {
   }
 
   async function confirmTx(): Promise<boolean> {
-    if (statusRef.current !== "enrolled") return !REQUIRE_PASSKEY;
+    if (statusRef.current !== "enrolled") return !REQUIRE_PASSKEY || skippedRef.current;
     try { return await runAuth(); } catch { return false; }
   }
 
@@ -143,9 +166,22 @@ export default function PasskeyProvider({ children }: { children: ReactNode }) {
     logout();
   }
 
+  function skip() {
+    try { sessionStorage.setItem("cp-pk-skip", "1"); } catch {}
+    setSkipped(true);
+  }
+
+  function copyLink() {
+    try {
+      navigator.clipboard.writeText(window.location.origin + "/dashboard");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  }
+
   const guarded = authenticated && !isPublic(path);
   const needLock = guarded && status === "enrolled" && locked;
-  const needEnroll = guarded && REQUIRE_PASSKEY && status === "none" && !path.startsWith("/claim");
+  const needEnroll = guarded && REQUIRE_PASSKEY && status === "none" && !skipped && !path.startsWith("/claim");
   const checking = guarded && status === "unknown";
 
   // try the fingerprint automatically as soon as the lock screen appears
@@ -186,14 +222,29 @@ export default function PasskeyProvider({ children }: { children: ReactNode }) {
         <div className="lock">
           <div className="box">
             <img src="/logo.svg" alt="" width={72} height={72} style={{ borderRadius: 18 }} />
-            <h1 style={{ margin: 0 }}>Set up your fingerprint lock</h1>
-            <p style={{ margin: 0, opacity: 0.8 }}>
-              For your safety, CashPay asks for your fingerprint, face or screen lock every time you open the app and before every payment.
-            </p>
-            <button className="cp-btn primary" style={{ minWidth: 240, minHeight: 52 }} disabled={busy} onClick={enrollNow}>
-              {busy ? "Please wait…" : "Set up fingerprint"}
-            </button>
+            {support === "no" ? (
+              <>
+                <h1 style={{ margin: 0 }}>This browser can&apos;t use fingerprint lock</h1>
+                <p style={{ margin: 0, opacity: 0.8 }}>
+                  CashPay protects your money with your fingerprint, face or screen lock (a passkey), but this browser or phone setting doesn&apos;t support it. Open CashPay in <b>Chrome, Samsung Internet or Safari</b>, and make sure your phone has a screen lock.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 style={{ margin: 0 }}>Set up your fingerprint lock</h1>
+                <p style={{ margin: 0, opacity: 0.8 }}>
+                  For your safety, CashPay asks for your fingerprint, face or screen lock every time you open the app and before every payment.
+                </p>
+                <button className="cp-btn primary" style={{ minWidth: 240, minHeight: 52 }} disabled={busy} onClick={enrollNow}>
+                  {busy ? "Please wait…" : "Set up fingerprint"}
+                </button>
+              </>
+            )}
             {err && <p style={{ margin: 0, fontSize: 14 }}>{err}</p>}
+            <button className="cp-btn" onClick={copyLink}>{copied ? "Link copied ✓" : "Copy link to open in another browser"}</button>
+            {ALLOW_SKIP_PASSKEY && (
+              <button className="cp-btn ghost" onClick={skip}>Continue without fingerprint (less secure)</button>
+            )}
             <button className="cp-btn ghost" onClick={() => logout()}>Sign out</button>
           </div>
         </div>

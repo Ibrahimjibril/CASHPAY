@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, Re
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { startAuthentication, startRegistration, browserSupportsWebAuthn, platformAuthenticatorIsAvailable } from "@simplewebauthn/browser";
-import { REQUIRE_PASSKEY, ALLOW_SKIP_PASSKEY, LOCK_AFTER_MS } from "@/lib/passkey";
+import { REQUIRE_PASSKEY, REQUIRE_ON_SEND, ALLOW_SKIP_PASSKEY, LOCK_AFTER_MS } from "@/lib/passkey";
 
 type Status = "unknown" | "none" | "enrolled";
 type Support = "unknown" | "yes" | "no";
@@ -43,12 +43,14 @@ export default function PasskeyProvider({ children }: { children: ReactNode }) {
   const [err, setErr] = useState("");
   const statusRef = useRef<Status>("unknown");
   const skippedRef = useRef(false);
+  const supportRef = useRef<Support>("unknown");
   const hiddenAt = useRef(0);
   const autoTried = useRef(false);
   const tokRef = useRef(getAccessToken);
   tokRef.current = getAccessToken;
   statusRef.current = status;
   skippedRef.current = skipped;
+  supportRef.current = support;
 
   const headers = useCallback(async () => {
     const token = await tokRef.current();
@@ -128,7 +130,14 @@ export default function PasskeyProvider({ children }: { children: ReactNode }) {
   }
 
   async function confirmTx(): Promise<boolean> {
-    if (statusRef.current !== "enrolled") return !REQUIRE_PASSKEY || skippedRef.current;
+    if (statusRef.current !== "enrolled") {
+      if (REQUIRE_ON_SEND) {
+        if (statusRef.current === "unknown") return false;
+        if (supportRef.current === "no") return true; // this browser can't do passkeys, so it can't be enforced
+        return (await enroll()) === null; // first payment: set up the fingerprint right now
+      }
+      return !REQUIRE_PASSKEY || skippedRef.current;
+    }
     try { return await runAuth(); } catch { return false; }
   }
 

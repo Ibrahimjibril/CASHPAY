@@ -136,7 +136,7 @@ Every payment is **verified on-chain by the server**. A payment is only marked `
     CLAIM_FEE_RESERVE              optional, fee reserve kept on claims and refunds (default 0.02)
     NEXT_PUBLIC_CLAIM_DAYS         optional, days shown in the app (default 30, keep in sync with the SQL trigger)
     NEXT_PUBLIC_SITE_URL           optional, default https://www.cashpayt.xyz (Share on X links)
-    NEXT_PUBLIC_REQUIRE_PASSKEY    optional, set to 1 to make the fingerprint lock mandatory
+    NEXT_PUBLIC_REQUIRE_PASSKEY    optional: 0 (default), send (fingerprint is set up the first time someone sends money) or 1 (strict, whole app locked until set up)
     NEXT_PUBLIC_LOCK_AFTER_SECONDS optional, seconds in the background before the app locks (default 15)
 
 ### Database schema

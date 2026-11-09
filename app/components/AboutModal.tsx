@@ -51,7 +51,6 @@ export default function AboutModal({ open, onClose }: { open: boolean; onClose: 
           ))}
         </div>
 
-        <p className="ab-note">{t("abNote")}</p>
 
         <div className="ab-cta">
           <Link className="cp-btn primary" href="/send" onClick={onClose}>{t("qSend")}</Link>

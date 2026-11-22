@@ -1,142 +1,128 @@
 # CashPay
 
-**Money for the social internet.** Send money just like sending a message.
+**Money for the social internet.** Send money as easily as sending a message.
 
-CashPay is a stablecoin payments app built on **Tempo mainnet**. Pay anyone with a **@username**, an **email address**, an **X handle** or a **wallet address**. The person you pay does not need a wallet or any crypto knowledge: they sign in and the money is theirs. If they never claim it, it returns to you.
+CashPay is a stablecoin payments app that runs on **Tempo mainnet**. You can pay a **@username**, an **email address**, an **X handle** or a **wallet address**. The person you pay does not need a wallet or any crypto knowledge: they sign in, a wallet is created for them, and the money is theirs. If nobody claims a payment within 15 days, it returns to the sender.
 
 - Live app: https://www.cashpayt.xyz
 - X: [@CashPay_](https://x.com/CashPay_)
-- Security policy: see `SECURITY.md`
+- Security policy: [SECURITY.md](SECURITY.md)
 
-> Status: public alpha on Tempo mainnet with real funds. Use small amounts while testing.
+**Status:** live on Tempo mainnet and used with real funds. The code has not been independently audited. Until a review is completed, we recommend starting with small amounts.
 
-## Judge's quick tour (about 3 minutes)
+## The problem
 
-1. Open https://www.cashpayt.xyz and sign in with Google, email, X or a passkey.
-2. **Wallet** page: your address, balances (USDT, USDC, OUSD, pathUSD) and history, including deposits from other wallets.
-3. **Send** a few cents by @username. Then send to an email address that is not on CashPay and open the claim link in another browser.
-4. **Tips**: tip an X handle that is not on CashPay and claim it by signing in with that X account.
-5. **Bulk Send**: pay several people in one transaction.
-6. **Transactions**: tap a payment to see the receipt, the claim state, the expiry date and the "Return money to my wallet" button.
+Paying someone online still means asking for bank details or a long wallet address, and if the other person has never used crypto, you cannot pay them at all. CashPay lets you pay an identity people already have (a username, an email, an X handle) and handles wallet creation, claiming and refunds for you.
 
-## What you can do
+## Features
 
-- **Sign in** with Google, email, X, a wallet or a passkey. A secure embedded wallet is created for you (Privy).
-- **Send money** to a @username, email, X handle or wallet address in **USDT, USDC, OUSD or pathUSD**, with an optional message and a **Max** button.
-- **Pay people who are not on CashPay yet**
-  - **Email:** they get a claim link and sign in with that email (code or Google).
-  - **X handle:** they claim by signing in with X. If they linked X to their CashPay profile, the tip goes **straight into their wallet** with no claim step.
-- **Expiry and refunds:** unclaimed email and X payments return to the sender after **30 days**.
-- **Bulk Send:** up to 20 people in one transaction, one signature, one network fee.
-- **Tips**, **receipts** you can screenshot, share cards for X, and a shareable batch page for many tips at once.
-- **Wallet page, Profile page** (photo, bio, linked X account, security), **Notifications**, **6 languages** (English, Chinese, French, Arabic, Hindi, Hausa), light and dark mode, mobile first.
+- **Sign in** with Google, email, X or an existing wallet. An embedded wallet is created through Privy. CashPay does not store users' private keys.
+- **Send money** to a @username, email, X handle or wallet address, with an optional message and a Max button.
+- **Stablecoins:** USDT, USDC, OUSD and pathUSD (TIP-20, 6 decimals). The sender chooses which one to use.
+- **Pay people who are not on CashPay yet.** The payment goes to a one-time escrow wallet. The recipient opens a claim link, signs in with the email or X account the payment was sent to, and the money is sent to their new wallet. If it is not claimed within 15 days, it can be returned to the sender.
+- **X accounts linked to CashPay** receive tips for their handle directly in their wallet, with no claim step.
+- **Bulk Send:** up to 20 recipients (wallets, emails, X handles, usernames) in one Tempo transaction with one signature and one network fee, with a note for each recipient. Each recipient is validated before sending.
+- **Tips** for CashPay users and X handles, with a shareable card.
+- **Wallet page** with balances per stablecoin, your receive address and history, including deposits sent from other wallets.
+- **Transactions and receipts**, notifications, profile with photo and linked accounts, and six languages (English, Chinese, French, Arabic, Hindi, Hausa).
+- **Optional fingerprint lock (passkey):** asks for the fingerprint, face or screen lock when the app is opened and before payments.
+
+## Tempo mainnet
+
+- Chain: Tempo mainnet, chain id 4217. Default RPC: https://rpc.tempo.xyz. Explorer: https://explore.mainnet.tempo.xyz.
+- Payments are Tempo transactions (type 118) whose network fee is paid in the stablecoin being sent, so users do not need a separate gas token.
+- Bulk Send uses several token transfers batched into one Tempo transaction.
+- Token configuration is kept in `lib/tokens.ts`. Amounts use 6 decimals.
 
 ## How it works
 
-    Registered user, or X account linked to a wallet
-        -> the sender signs a transfer -> funds go straight to that wallet
+    Registered user, or an X account linked to a CashPay wallet
+        -> the sender signs one transfer -> the funds go straight to that wallet
 
-    Email or X handle not on CashPay
-        -> funds go to a one-time escrow wallet (Privy server wallet)
-        -> the recipient signs in (email / Google / X) and Privy verifies who they are
-        -> the server checks it matches the recipient and sends the funds to their new wallet
+    Email or X handle that is not on CashPay
+        -> the funds go to a one-time escrow wallet (a Privy server wallet)
+        -> the recipient signs in (email, Google or X) and the server checks the identity
+        -> the escrow sends the funds to the recipient's new wallet
 
-    Nobody claims within 30 days
-        -> the escrow returns the funds to the sender (daily cron, or the sender taps
-           "Return money to my wallet")
+    Not claimed within 15 days
+        -> the escrow returns the funds to the sender (daily cron, or the sender's
+           "Return money to my wallet" button)
 
-Every payment is **verified on-chain by the server**. A payment is only marked `CONFIRMED` after the server reads the Tempo transaction receipt and checks the token transfer log (sender, recipient, amount and token).
+## Transaction verification
 
-## Security model
+The browser is never trusted to say a payment succeeded. After a payment is sent, the server reads the transaction receipt from the Tempo RPC and checks the token Transfer logs (token contract, sender, recipient and amount). Only then is the payment marked `CONFIRMED`. Statuses are `SUBMITTED`, `CONFIRMED`, `FAILED` and `MISMATCH`. Payments are unique by (transaction hash, leg), so the same transaction cannot be recorded twice. Claims and refunds are verified from their receipts in the same way before they are marked as done.
 
-### What we hold, and who can move it
+## Security
 
-- **User wallets:** embedded wallets managed by Privy. CashPay never sees private keys or seed phrases.
-- **Escrow wallets:** one Privy server wallet per unclaimed payment, controlled by the CashPay server through `PRIVY_APP_SECRET`. This is the main trust assumption of the app. Funds are only moved by two server code paths: a verified **claim** (to the verified recipient) and a **refund** (to the original sender, only after expiry).
+**Implemented**
+- Every API route verifies the Privy access token on the server.
+- Inputs are validated with Zod and database queries are parameterized.
+- Atomic database locks (`CLAIMING`, `REFUNDING`) prevent double claims and double refunds.
+- Claims require an identity verified by Privy (X account or email) that matches the recipient. Expired payments cannot be claimed.
+- Each unclaimed payment has its own escrow wallet. Refunds go only to the sender's wallet, after expiry. The daily refund cron is protected by `CRON_SECRET`.
+- Secrets are kept in environment variables.
+- Email content is escaped, and profile photos are re-encoded to JPEG and validated on the server.
+- Optional fingerprint lock using WebAuthn, verified on the server.
 
-### Threats and mitigations
+**Not independently audited.** See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
-    Threat                                  Mitigation                                                   Status
-    --------------------------------------  -----------------------------------------------------------  -----------
-    Calling the API without being logged in Privy access token verified on the server for every call    Done
-    Fake or altered payment records         Server verifies the Tempo receipt logs before CONFIRMED      Done
-    Double claim / double refund (races)    Atomic DB locks (CLAIMING, REFUNDING), idempotent by tx hash Done
-    Claiming someone else's money           Privy-verified X account or email must match the recipient   Done
-    Money stuck in escrow forever           30 day expiry, then refund (cron and manual button)          Done
-    Stolen phone or session                 Optional passkey (fingerprint) MFA before wallet signing     Done (opt-in)
-    Injection and malformed input           Zod validation, parameterized SQL, escaped email content     Done
-    Malicious profile photos                Re-encoded to JPEG in the browser, validated on the server   Done
-    Spam and abuse                          Cap on new escrows per user per day, search is auth-only     Minimal
-    Escrow secret compromise                Secret only in environment variables; exposure limited by    Open risk
-                                            the 30 day expiry; roadmap below
-    Custom smart contract bugs              No custom contract holds funds today                         Not applicable
+## Verification status
 
-### Fingerprint lock (passkey)
+**Tested manually on Tempo mainnet by the author, with small real amounts**
+- Sending payments and Bulk Send.
+- Unclaimed payments held in escrow and returned to the sender after expiry.
+- Deposits from other wallets showing in the wallet history.
 
-- In **Profile -> Security** a user can turn on the CashPay fingerprint lock (WebAuthn passkey: fingerprint, face or screen lock). Public keys are stored in the `passkeys` table; every challenge is one-time and every assertion is verified on the server (`@simplewebauthn/server`, user verification required).
-- With the lock on, the app **locks every time it is opened or returns from the background** (default 15 seconds, `NEXT_PUBLIC_LOCK_AFTER_SECONDS`), and **every payment (Send, Tips, Bulk Send) asks for the fingerprint first**, whatever the amount. There is no "unlocked for 15 minutes" window.
-- `NEXT_PUBLIC_REQUIRE_PASSKEY=1` makes the fingerprint lock mandatory for everyone who signs in (claim, public and login pages stay open so recipients can claim money).
-- Turning the lock off needs a fingerprint check first. If a user loses their device, "I can't use my fingerprint" signs them out; after a fresh sign-in with email, Google or X the lock is reset and can be set up again. This recovery path is weaker than the fingerprint itself, by design, so nobody is locked out forever.
-- **Limitation:** the payment confirmation is enforced by the CashPay app, not by the wallet. Payments are signed by the user's Privy embedded wallet in the browser, so a technical attacker who already controls an unlocked session could bypass the app UI. The lock protects against someone who simply has the user's unlocked phone. Server-enforced wallet policies are on the roadmap.
-- Passkeys are tied to the domain `cashpayt.xyz` (they work on www and non-www).
+**Implemented, not independently audited**
+- Claim authorization for email and X payments, escrow handling, and the fingerprint lock.
 
-### Known limitations (we want to be upfront)
+**Planned**
+- Automated test suite and continuous integration.
+- Reconciliation job for interrupted sessions (see limitations).
+- Wallet policies for the escrow wallets, and evaluation of an on-chain claim escrow contract.
+- External security review.
+- Fiat on/off-ramp partners, and sharing payments through chat apps.
 
-- Escrowed funds are **custodial until claimed or returned**. A leaked `PRIVY_APP_SECRET` would put escrowed funds at risk. Keep it secret and rotate it if in doubt.
-- No external security audit and no automated test suite yet.
-- X claims match the X account Privy verified; the permanent X user id is used when it is known, otherwise the handle. A handle that changes hands could be claimed by its new owner; the 30 day expiry limits this.
-- Rate limiting is minimal (new escrows are capped per user per day).
-- Email payments sent before escrow was introduced went directly to a pre-generated wallet and have no expiry.
-- The passkey requirement is optional and not enabled by default.
-- Dependency versions are not fully pinned yet (no lockfile committed).
-- Emails from a new Gmail sender may land in spam. A custom domain with Resend is the production fix.
-- Running with Privy development-mode credentials during the hackathon.
+## Trust model and known limitations
 
-### Roadmap
-
-- Privy wallet policies for the escrow wallets (restrict where escrowed funds can go).
-- An **on-chain claim escrow contract** with expiry and refund, so escrowed funds no longer depend on a server secret.
-- Automated tests, dependency pinning and an external security review.
-- Admin control center with audit logs and reconciliation.
-
-## What's new
-
-- Unclaimed email and X payments **expire after 30 days and return to the sender** (daily cron and manual button). Email payments now use escrow and can be claimed with an email code or Google.
-- **Link X account** in Profile: tips to your @handle go straight into your wallet.
-- **Passkey support:** sign in with a passkey and optional fingerprint protection for payments.
-- **Wallet, Profile and Notifications** pages, mobile bottom navigation, **Refresh** buttons, **Max** button, bulk batch share page.
-- USDT, USDC, OUSD and pathUSD, six languages, branded claim emails, new domain https://www.cashpayt.xyz.
+- **Escrow is controlled by the server.** Unclaimed payments sit in Privy server wallets controlled with `PRIVY_APP_SECRET`, so the secret must be protected. Exposure is limited in time by the 15 day expiry. An on-chain escrow is being evaluated.
+- **No external audit yet**, and no automated test suite yet.
+- **Recording:** a payment is recorded right after it is broadcast. If a session is interrupted in between, the transfer can exist on-chain without a record. A reconciliation job is planned.
+- **Rate limiting** is minimal (new escrows are capped per user per day).
+- The **fingerprint confirmation** is enforced by the app, not by the wallet.
+- Emails sent through Gmail SMTP can land in spam. Resend with a custom domain is supported and recommended.
+- Email payments sent before escrow was introduced were delivered to pre-generated wallets and have no expiry.
 
 ## Tech stack
 
 - Next.js 15 (App Router), React 19, TypeScript
-- Privy v3 (embedded wallets, login, passkeys, MFA, server wallets via `@privy-io/node`)
-- Tempo mainnet (chain id 4217), viem
+- Privy v3 (embedded wallets, login, server wallets through `@privy-io/node`)
+- Tempo mainnet (chain id 4217) and viem
 - Neon (serverless PostgreSQL)
 - Nodemailer (Gmail SMTP) or Resend for emails
-- Vercel hosting and Vercel Cron
+- Vercel (hosting and cron)
 
 ## Run it yourself
 
-1. Create a Privy app (enable Google, Email, X, Wallet and Passkey; enable MFA with passkeys; add your domain to allowed origins).
+1. Create a Privy app (enable Google, Email, X and Wallet logins, and add your domain to the allowed origins).
 2. Create a Neon database and run the SQL below.
-3. Set the environment variables and deploy to Vercel (the daily refund cron is in `vercel.json`).
+3. Set the environment variables and deploy to Vercel (the daily refund cron is in `vercel.json`), or run `npm install && npm run dev`.
 
 ### Environment variables
 
     NEXT_PUBLIC_PRIVY_APP_ID       Privy app id (public)
     PRIVY_APP_SECRET               Privy app secret (secret)
     DATABASE_URL                   Neon connection string (secret)
-    CRON_SECRET                    random string protecting the refund cron (secret)
+    CRON_SECRET                    random string that protects the refund cron (secret)
     GMAIL_USER                     Gmail address used to send emails
     GMAIL_APP_PASSWORD             Gmail app password (secret)
     RESEND_API_KEY                 optional, own-domain email (secret)
-    EMAIL_FROM                     optional, e.g. CashPay <noreply@yourdomain>
+    EMAIL_FROM                     optional, sender used with Resend
     APP_URL                        optional, base URL used in emails
-    CLAIM_FEE_RESERVE              optional, fee reserve kept on claims and refunds (default 0.02)
-    NEXT_PUBLIC_CLAIM_DAYS         optional, days shown in the app (default 30, keep in sync with the SQL trigger)
-    NEXT_PUBLIC_SITE_URL           optional, default https://www.cashpayt.xyz (Share on X links)
-    NEXT_PUBLIC_REQUIRE_PASSKEY    optional: 0 (default), send (fingerprint is set up the first time someone sends money) or 1 (strict, whole app locked until set up)
+    CLAIM_FEE_RESERVE              optional, network fee reserve kept on claims and refunds (default 0.02)
+    NEXT_PUBLIC_CLAIM_DAYS         optional, days shown in the app (default 15, keep in sync with the SQL trigger)
+    NEXT_PUBLIC_SITE_URL           optional, default https://www.cashpayt.xyz
+    NEXT_PUBLIC_REQUIRE_PASSKEY    optional, makes the fingerprint lock mandatory
     NEXT_PUBLIC_LOCK_AFTER_SECONDS optional, seconds in the background before the app locks (default 15)
 
 ### Database schema
@@ -206,15 +192,13 @@ Every payment is **verified on-chain by the server**. A payment is only marked `
     create or replace function cashpay_set_expiry() returns trigger as $$
     begin
       if new.escrow_id is not null and new.expires_at is null then
-        new.expires_at := now() + interval '30 days';
+        new.expires_at := now() + interval '15 days';
       end if;
       return new;
     end;
     $$ language plpgsql;
     create trigger cashpay_set_expiry before insert on payments
       for each row execute function cashpay_set_expiry();
-
-### Passkey tables
 
     create table passkeys (
       id text primary key,
@@ -237,11 +221,11 @@ Every payment is **verified on-chain by the server**. A payment is only marked `
 ## Project structure
 
     app/
-      page.tsx                landing page
-      login/                  sign in (including passkey)
+      page.tsx                      landing page
+      login/                        sign in
       dashboard/ wallet/ profile/ activity/ settings/   signed-in pages
-      send/ send/bulk/ tips/  sending money
-      claim/[id]/ batch/[hash]/   claim links and batch share pages
-      u/[username]/           public profile
-      api/                    server routes (payments, claim, refund, cron, notifications, ...)
-    lib/                      db, auth, Tempo helpers, escrow, refund, email, passkey, i18n
+      send/ send/bulk/ tips/        sending money
+      claim/[id]/ batch/[hash]/     claim links and batch share pages
+      u/[username]/                 public profile
+      api/                          server routes (payments, claim, refund, cron, notifications, passkey, ...)
+    lib/                            db, auth, tokens, Tempo helpers, escrow, refund, email, i18n

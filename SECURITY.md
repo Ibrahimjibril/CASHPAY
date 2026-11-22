@@ -25,11 +25,11 @@ Out of scope: Privy, Tempo, Vercel, Neon and other third-party services (report 
 - Payments are marked confirmed only after the server verifies the Tempo transaction receipt (token, sender, recipient, amount).
 - Atomic database locks prevent double claims and double refunds.
 - Claims require a Privy-verified match with the recipient (X account or email).
-- Unclaimed escrow payments expire after 30 days and return to the sender.
+- Unclaimed escrow payments expire after 15 days and return to the sender.
 - Optional fingerprint (passkey) lock: asked every time the app is opened and before every payment (WebAuthn, verified on the server).
 
 ## Known risks
 
-- Unclaimed payments sit in escrow wallets controlled by the CashPay server (Privy server wallets). If `PRIVY_APP_SECRET` were compromised, escrowed funds could be moved. Exposure is limited in time by the 30 day expiry.
+- Unclaimed payments sit in escrow wallets controlled by the CashPay server (Privy server wallets). If `PRIVY_APP_SECRET` were compromised, escrowed funds could be moved. Exposure is limited in time by the 15 day expiry.
 - No external audit and no automated test suite yet.
 - Dependency versions are not fully pinned yet.

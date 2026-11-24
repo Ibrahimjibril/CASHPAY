@@ -16,7 +16,7 @@ Paying someone online still means asking for bank details or a long wallet addre
 
 ## Features
 
-- **Sign in** with Google, email, X or an existing wallet. An embedded wallet is created through Privy. CashPay does not store users' private keys.
+- **Sign in** with Google, email or X. An embedded wallet is created through Privy. CashPay does not store users' private keys.
 - **Send money** to a @username, email, X handle or wallet address, with an optional message and a Max button.
 - **Stablecoins:** USDT, USDC, OUSD and pathUSD (TIP-20, 6 decimals). The sender chooses which one to use.
 - **Pay people who are not on CashPay yet.** The payment goes to a one-time escrow wallet. The recipient opens a claim link, signs in with the email or X account the payment was sent to, and the money is sent to their new wallet. If it is not claimed within 15 days, it can be returned to the sender.

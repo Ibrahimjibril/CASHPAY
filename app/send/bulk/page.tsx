@@ -240,8 +240,8 @@ export default function BulkSend() {
     setStep("sending");
     let hash = "";
     try {
-      const wallet: any = wallets.find((w: any) => w.walletClientType === "privy") ?? wallets[0];
-      if (!wallet) throw new Error("Your wallet isn't ready yet");
+      const wallet: any = wallets.find((w: any) => w.walletClientType === "privy");
+      if (!wallet) throw new Error(wallets.length ? "EXTERNAL_WALLET" : "NO_WALLET");
       if (me?.wallet_address && wallet.address.toLowerCase() !== me.wallet_address.toLowerCase()) throw new Error("Wallet mismatch");
       const T = tokenBySymbol(tok)!;
       const calls = plan.map((r) => ({ to: T.address, data: encodeTransfer(r.address, r.units) }));
@@ -254,6 +254,8 @@ export default function BulkSend() {
       setBatchHash(hash);
     } catch (e: any) {
       const detail = String(e?.shortMessage || e?.message || e).slice(0, 220);
+      if (detail.includes("EXTERNAL_WALLET")) { setMsg("This account is connected with an external wallet (like Rabby or MetaMask), which can't sign CashPay's Tempo payments yet. Please sign in with Google, email or X to pay from your CashPay wallet."); setStep("review"); return; }
+      if (detail.includes("NO_WALLET")) { setMsg("Your wallet isn't connected in this browser. Please sign out and sign in again."); setStep("review"); return; }
       setMsg(`We couldn't complete this payment. Your funds were not charged. [${detail}]`);
       setStep("review");
       return;

@@ -4,7 +4,7 @@ const steps = [
   ["02", "Enter amount", "Pick a quick amount or type your own."],
   ["03", "Send", "Confirm once. Network fee shown upfront."],
   ["04", "They get notified", "An email lands with a claim button."],
-  ["05", "They claim", "Google or wallet. Money is theirs."],
+  ["05", "They claim", "Email, Google or X. Money is theirs."],
 ];
 const uses = ["Creator tips", "Freelancer payments", "Community rewards", "Global payments", "Micro-payments", "Digital gifts", "Remote work", "Online communities", "AI/agent payments"];
 

@@ -16,7 +16,7 @@ Paying someone online still means asking for bank details or a long wallet addre
 
 ## Features
 
-- **Sign in** with Google, email or X. An embedded wallet is created through Privy. CashPay does not store users' private keys.
+- **Sign in** with Google, email or X. An embedded wallet is created through Privy. CashPay does not store users' private keys. Sign-in with an external wallet is not enabled yet; you can still receive from and send to any wallet address.
 - **Send money** to a @username, email, X handle or wallet address, with an optional message and a Max button.
 - **Stablecoins:** USDT, USDC, OUSD and pathUSD (TIP-20, 6 decimals). The sender chooses which one to use.
 - **Pay people who are not on CashPay yet.** The payment goes to a one-time escrow wallet. The recipient opens a claim link, signs in with the email or X account the payment was sent to, and the money is sent to their new wallet. If it is not claimed within 15 days, it can be returned to the sender.
@@ -78,6 +78,8 @@ The browser is never trusted to say a payment succeeded. After a payment is sent
 
 **Planned**
 - Automated test suite and continuous integration.
+- External wallet sign-in (for example MetaMask and OKX) once signing is verified on Tempo.
+- Sending payments through WhatsApp and Telegram.
 - Reconciliation job for interrupted sessions (see limitations).
 - Wallet policies for the escrow wallets, and evaluation of an on-chain claim escrow contract.
 - External security review.
@@ -90,7 +92,6 @@ The browser is never trusted to say a payment succeeded. After a payment is sent
 - **Recording:** a payment is recorded right after it is broadcast. If a session is interrupted in between, the transfer can exist on-chain without a record. A reconciliation job is planned.
 - **Rate limiting** is minimal (new escrows are capped per user per day).
 - The **fingerprint confirmation** is enforced by the app, not by the wallet.
-- **External wallets** (MetaMask, OKX, ...) can sign single payments only if they support the Tempo network. Bulk Send needs a CashPay wallet (sign in with Google, email or X).
 - Emails sent through Gmail SMTP can land in spam. Resend with a custom domain is supported and recommended.
 - Email payments sent before escrow was introduced were delivered to pre-generated wallets and have no expiry.
 

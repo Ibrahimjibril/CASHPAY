@@ -89,6 +89,7 @@ The browser is never trusted to say a payment succeeded. After a payment is sent
 **Planned**
 - Automated test suite and continuous integration.
 - Sending payments through WhatsApp and Telegram.
+- - WhatsApp and Telegram integration: Bring CashPay payments directly into WhatsApp and Telegram, making it easier for both Web2 and Web3 users to send, receive and manage stablecoin payments through the messaging platforms they already use.
 - Reconciliation job for interrupted sessions (see limitations).
 - Wallet policies for the escrow wallets, and evaluation of an on-chain claim escrow contract.
 - External security review.

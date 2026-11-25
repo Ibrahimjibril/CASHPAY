@@ -1,6 +1,6 @@
 # CashPay
 
-**Money for the social internet.** Send money as easily as sending a message.
+**Social Internet Money.** Send, receive and manage digital dollars as easily as using the social internet.
 
 CashPay is a stablecoin payments app that runs on **Tempo mainnet**. You can pay a **@username**, an **email address**, an **X handle** or a **wallet address**. The person you pay does not need a wallet or any crypto knowledge: they sign in, a wallet is created for them, and the money is theirs. If nobody claims a payment within 15 days, it returns to the sender.
 
@@ -16,7 +16,7 @@ Paying someone online still means asking for bank details or a long wallet addre
 
 ## Features
 
-- **Sign in** with Google, email or X. An embedded wallet is created through Privy. CashPay does not store users' private keys. Sign-in with an external wallet is not enabled yet; you can still receive from and send to any wallet address.
+- **Simple sign-in** with Google, email or X. Privy provides an embedded wallet automatically. External wallet login is intentionally not part of the current login experience. Users can still receive from and send to any wallet address.
 - **Send money** to a @username, email, X handle or wallet address, with an optional message and a Max button.
 - **Stablecoins:** USDT, USDC, OUSD and pathUSD (TIP-20, 6 decimals). The sender chooses which one to use.
 - **Pay people who are not on CashPay yet.** The payment goes to a one-time escrow wallet. The recipient opens a claim link, signs in with the email or X account the payment was sent to, and the money is sent to their new wallet. If it is not claimed within 15 days, it can be returned to the sender.
@@ -26,6 +26,16 @@ Paying someone online still means asking for bank details or a long wallet addre
 - **Wallet page** with balances per stablecoin, your receive address and history, including deposits sent from other wallets.
 - **Transactions and receipts**, notifications, profile with photo and linked accounts, and six languages (English, Chinese, French, Arabic, Hindi, Hausa).
 - **Optional fingerprint lock (passkey):** asks for the fingerprint, face or screen lock when the app is opened and before payments.
+
+## Wallet experience
+
+CashPay is designed to make digital money accessible to everyone, including people who have never used a crypto wallet.
+
+Instead of requiring users to connect an external wallet, CashPay provides an embedded wallet experience powered by Privy. Users sign in through supported authentication methods, and their wallet is created through Privy.
+
+This approach supports CashPay's simple onboarding experience and integrated features such as Bulk Send, which relies on the embedded-wallet infrastructure. Users can still send money to external wallet addresses and receive money from other wallets.
+
+The goal is simple: make sending and receiving digital money feel as easy as using the social internet.
 
 ## Tempo mainnet
 
@@ -78,7 +88,6 @@ The browser is never trusted to say a payment succeeded. After a payment is sent
 
 **Planned**
 - Automated test suite and continuous integration.
-- External wallet sign-in (for example MetaMask and OKX) once signing is verified on Tempo.
 - Sending payments through WhatsApp and Telegram.
 - Reconciliation job for interrupted sessions (see limitations).
 - Wallet policies for the escrow wallets, and evaluation of an on-chain claim escrow contract.
@@ -106,7 +115,7 @@ The browser is never trusted to say a payment succeeded. After a payment is sent
 
 ## Run it yourself
 
-1. Create a Privy app (enable Google, Email, X and Wallet logins, and add your domain to the allowed origins).
+1. Create a Privy app and configure the supported Google, Email and X authentication methods. Add your application domain to the allowed origins. Do not enable external wallet login for this setup.
 2. Create a Neon database and run the SQL below.
 3. Set the environment variables and deploy to Vercel (the daily refund cron is in `vercel.json`), or run `npm install && npm run dev`.
 

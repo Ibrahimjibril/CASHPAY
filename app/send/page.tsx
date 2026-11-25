@@ -11,6 +11,7 @@ import PasskeyGate from "@/app/components/PasskeyGate";
 import { REQUIRE_PASSKEY, hasPasskey } from "@/lib/passkey";
 import { CHAIN_ID, parseUnits6, encodeTransfer, isAddress, maxSendable } from "@/lib/money";
 import { tokenBySymbol } from "@/lib/tokens";
+import { injectedProvider, sendExternalTransfer } from "@/lib/external";
 import { toSite, CLAIM_DAYS } from "@/lib/site";
 
 type Person = { username: string; display_name: string; wallet_address: string };
@@ -163,20 +164,32 @@ export default function Send() {
     setMsg("");
     let hash = "";
     try {
-      const wallet: any = wallets.find((w: any) => w.walletClientType === "privy");
-      if (!wallet) throw new Error(wallets.length ? "EXTERNAL_WALLET" : "NO_WALLET");
-      if (me?.wallet_address && wallet.address.toLowerCase() !== me.wallet_address.toLowerCase()) throw new Error("Wallet mismatch");
-      const out: any = await sendTransaction({
-        transaction: {
-          type: 118,
-          chainId: CHAIN_ID,
-          feeToken: T.address,
-          calls: [{ to: T.address, data: encodeTransfer(to.address, units) }],
-        },
-        wallet,
-      } as any);
-      if (!out?.hash) throw new Error("No transaction hash returned");
-      hash = out.hash;
+      const embedded: any = wallets.find((w: any) => w.walletClientType === "privy");
+      if (embedded) {
+        if (me?.wallet_address && embedded.address.toLowerCase() !== me.wallet_address.toLowerCase()) throw new Error("Wallet mismatch");
+        const out: any = await sendTransaction({
+          transaction: { type: 118, chainId: CHAIN_ID, feeToken: T.address, calls: [{ to: T.address, data: encodeTransfer(to.address, units) }] },
+          wallet: embedded,
+        } as any);
+        if (!out?.hash) throw new Error("No transaction hash returned");
+        hash = out.hash;
+      } else {
+        // External wallet (MetaMask, Rabby, OKX, ...): a normal EVM token transfer
+        const ext: any = wallets[0];
+        let provider: any = null;
+        let from = "";
+        if (ext) {
+          provider = await ext.getEthereumProvider();
+          from = ext.address;
+          if (me?.wallet_address && from.toLowerCase() !== me.wallet_address.toLowerCase()) throw new Error("Wallet mismatch");
+        } else {
+          const inj = await injectedProvider(me?.wallet_address ?? null);
+          if (!inj) throw new Error("Your wallet isn't ready yet");
+          provider = inj.provider;
+          from = inj.address;
+        }
+        hash = await sendExternalTransfer(provider, from, T.address, encodeTransfer(to.address, units));
+      }
     } catch (e: any) {
       const detail = String(e?.shortMessage || e?.message || e).slice(0, 220);
       if (detail.includes("EXTERNAL_WALLET")) { setMsg("This account is connected with an external wallet (like Rabby or MetaMask), which can't sign CashPay's Tempo payments yet. Please sign in with Google, email or X to pay from your CashPay wallet."); setStep("form"); return; }

@@ -241,7 +241,7 @@ export default function BulkSend() {
     let hash = "";
     try {
       const wallet: any = wallets.find((w: any) => w.walletClientType === "privy");
-      if (!wallet) throw new Error(wallets.length ? "EXTERNAL_WALLET" : "NO_WALLET");
+      if (!wallet) throw new Error("Bulk Send needs a CashPay wallet. Sign in with Google, email or X to use it. With an external wallet, use Send for one person at a time.");
       if (me?.wallet_address && wallet.address.toLowerCase() !== me.wallet_address.toLowerCase()) throw new Error("Wallet mismatch");
       const T = tokenBySymbol(tok)!;
       const calls = plan.map((r) => ({ to: T.address, data: encodeTransfer(r.address, r.units) }));

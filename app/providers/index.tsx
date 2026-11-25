@@ -23,7 +23,9 @@ const config: any = {
     createOnLogin: "users-without-wallets",
     ethereum: { createOnLogin: "users-without-wallets" },
   },
-  appearance: { theme: "light", accentColor: "#0E7C66" },
+  appearance: {
+        walletList: ["metamask", "okx_wallet", "coinbase_wallet", "phantom", "rainbow", "zerion", "wallet_connect_qr"] as any,
+        walletChainType: "ethereum-only", theme: "light", accentColor: "#0E7C66" },
   defaultChain: tempoChain,
   supportedChains: [tempoChain],
 };
